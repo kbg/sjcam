@@ -31,7 +31,9 @@
 
 Recorder::Recorder(QObject *parent)
     : QThread(parent),
-      m_camera(new Camera)
+      m_camera(new Camera),
+      m_stopRequested(false),
+      m_numFrames(10)
 {
 }
 
@@ -40,9 +42,9 @@ Recorder::~Recorder()
     if (isRunning()) {
         stop();
         wait();
-        closeCamera();
     }
 
+    closeCamera();
     delete m_camera;
 }
 
@@ -55,19 +57,24 @@ bool Recorder::openCamera(ulong cameraId)
 
     emit info("Opening camera...");
 
-    QMutexLocker locker(&m_cameraMutex);
+    m_cameraMutex.lock();
     if (!m_camera->open(cameraId)) {
         emit error(m_camera->errorString());
+        m_cameraMutex.unlock();
         return false;
     }
     if (!m_camera->resetConfig()) {
         emit error(m_camera->errorString());
         m_camera->close();
+        m_cameraMutex.unlock();
         return false;
     }
+    QString cameraInfoString = m_camera->infoString();
+    m_cameraMutex.unlock();
 
-    emit info("\n" + m_camera->infoString() + "\n");
+    emit info("\n" + cameraInfoString + "\n");
 
+    allocateFrames();
     return true;
 }
 
@@ -78,10 +85,14 @@ bool Recorder::closeCamera()
         return false;
     }
 
-    QMutexLocker locker(&m_cameraMutex);
+    m_cameraMutex.lock();
     if (m_camera->isOpen())
         emit info("Closing camera.");
     m_camera->close();
+    m_cameraMutex.unlock();
+
+    clearFrameQueues();
+    return true;
 }
 
 bool Recorder::isCameraOpen() const
@@ -110,6 +121,25 @@ bool Recorder::setAttribute(const QByteArray &name, const QVariant &value)
     return true;
 }
 
+bool Recorder::hasFinishedFrame() const
+{
+    QMutexLocker locker(&m_queueMutex);
+    return !m_outputQueue.isEmpty();
+}
+
+tPvFrame * Recorder::readFinishedFrame()
+{
+    QMutexLocker locker(&m_queueMutex);
+    return m_outputQueue.isEmpty() ? 0 : m_outputQueue.dequeue();
+}
+
+void Recorder::enqueueFrame(tPvFrame *frame)
+{
+    Q_ASSERT(frame);
+    QMutexLocker locker(&m_queueMutex);
+    return m_inputQueue.enqueue(frame);
+}
+
 void Recorder::start()
 {
     if (isRunning())
@@ -128,93 +158,179 @@ void Recorder::stop()
     m_stopRequested = true;
 }
 
-void Recorder::run()
+void Recorder::allocateFrames()
 {
-    QList<tPvFrame *> frameList;
+    Q_ASSERT(!isRunning());
 
-// +++ queue
-    m_queueMutex.lock();
-
-    // read all frames from the input queue
-    frameList.reserve(m_inputQueue.size());
-    while (!m_inputQueue.isEmpty())
-        frameList.append(m_inputQueue.dequeue());
-
-    m_queueMutex.unlock();
-// --- queue
-
-// +++ cam
-    m_cameraMutex.lock();
-
-    // test
+    // create frames with the full sensor size and 2 bytes per pixel to make
+    // sure that all possible frames fit to the allocated buffers
     uint width = m_camera->sensorWidth();
     uint height = m_camera->sensorHeight();
     ulong bufferSize = 2L * width * height;
-    for (int i = 0; i < 10; ++i)
-        frameList.append(allocPvFrame(bufferSize));
 
+    m_queueMutex.lock();
+    for (int i = 0; i < m_numFrames; ++i)
+        m_inputQueue.enqueue(allocPvFrame(bufferSize));
+    m_queueMutex.unlock();
+}
+
+void Recorder::clearFrameQueues()
+{
+    Q_ASSERT(!isRunning());
+
+    m_cameraMutex.lock();
+    while (!m_cameraQueue.isEmpty())
+        freePvFrame(m_cameraQueue.dequeue());
+    m_cameraMutex.unlock();
+
+    m_queueMutex.lock();
+    while (!m_inputQueue.isEmpty())
+        freePvFrame(m_inputQueue.dequeue());
+    while (!m_outputQueue.isEmpty())
+        freePvFrame(m_outputQueue.dequeue());
+    m_queueMutex.unlock();
+}
+
+/*
+  == Capture Loop ==
+
+     Start capturing
+     Register frames in camera queue
+     Move and register frames: input queue -> camera queue
+     Start acquisition
+
+     while not done:
+         Move and register frames: input queue -> camera queue
+         Wait for first frame in camera queue to be done
+         Move finished frame: camera queue -> output queue
+         emit frameFinished()
+
+     Stop acquisition
+     Cancel pending frames (stored in camera queue)
+     Stop capturing
+*/
+void Recorder::run()
+{
+    // list of frames, used to move frames between queues
+    QList<tPvFrame *> frameList;
+
+// +++ queue
+    // read all frames from the input queue
+    m_queueMutex.lock();
+    while (!m_inputQueue.isEmpty())
+        frameList.append(m_inputQueue.dequeue());
+    m_queueMutex.unlock();
+// --- queue
+
+// +++ camera
+    m_cameraMutex.lock();
     if (!m_camera->startCapturing()) {
         emit error(m_camera->errorString());
         m_cameraMutex.unlock();
         return;
     }
 
-    // enqueue all frames from the input queue to the camera queue
-    foreach (tPvFrame *frame, frameList) {
+    // move all frames from the input to the camera queue
+    foreach (tPvFrame *frame, frameList)
         m_cameraQueue.enqueue(frame);
-        if (!m_camera->enqueueFrame(frame))
-            emit error(m_camera->errorString());
-    }
     frameList.clear();
+
+    // register all frames in the camera queue
+    foreach (tPvFrame *frame, m_cameraQueue) {
+        if (!m_camera->enqueueFrame(frame)) {
+            emit error(m_camera->errorString());
+            m_camera->clearFrameQueue();
+            m_camera->stopCapturing();
+            m_cameraMutex.unlock();
+            return;
+        }
+    }
 
     if (!m_camera->startAcqusition()) {
         emit error(m_camera->errorString());
-        if (!m_camera->clearFrameQueue())
-            emit error(m_camera->errorString());
-        if (!m_camera->stopCapturing())
-            emit error(m_camera->errorString());
+        m_camera->clearFrameQueue();
+        m_camera->stopCapturing();
         m_cameraMutex.unlock();
         return;
     }
-
     m_cameraMutex.unlock();
-// --- cam
+// --- camera
 
-    ulong i = 1;
+    ulong id = 1;
     while (!isStopRequested())
     {
-// +++ cam
+        // make sure that other threads can get a mutex lock; this seems to
+        // be only neccessary in some pathological cases, but waiting 1 ms
+        // doesn't hurt considering the maximum possible frame rates
+        msleep(1);
+
+// +++ queue
+        // read all frames from the input queue
+        m_queueMutex.lock();
+        while (!m_inputQueue.isEmpty())
+            frameList.append(m_inputQueue.dequeue());
+        m_queueMutex.unlock();
+// --- queue
+
+// +++ camera
         m_cameraMutex.lock();
+
+        // move all frames from the input to the camera queue
+        foreach (tPvFrame *frame, frameList)
+            m_cameraQueue.enqueue(frame);
+
+        // register new frames
+        foreach (tPvFrame *frame, frameList) {
+            if (!m_camera->enqueueFrame(frame)) {
+                emit error(m_camera->errorString());
+                m_camera->stopAcquisition();
+                m_camera->clearFrameQueue();
+                m_camera->stopCapturing();
+                m_cameraMutex.unlock();
+                return;
+            }
+        }
+        frameList.clear();
 
         if (m_cameraQueue.isEmpty()) {
             emit error("Capture queue is empty.");
             m_cameraMutex.unlock();
+            msleep(10);
             continue;
         }
 
-        bool timeout;
-        tPvFrame *frame = m_cameraQueue.dequeue();
-        if (m_camera->waitForFrameDone(frame, 100, &timeout)) {
-            emit frameDone(i, frame->Status);
-            m_cameraQueue.enqueue(frame);
-            if (!m_camera->enqueueFrame(frame))
+        bool timeout = false;
+        tPvFrame *frame = m_cameraQueue.first();
+        if (!m_camera->waitForFrameDone(frame, 100, &timeout)) {
+            if (timeout) {
+                m_cameraMutex.unlock();
+                continue;
+            } else {
                 emit error(m_camera->errorString());
-        } else {
-            if (!timeout)
-                emit error(m_camera->errorString());
-            m_cameraQueue.prepend(frame);
+                m_camera->stopAcquisition();
+                m_camera->clearFrameQueue();
+                m_camera->stopCapturing();
+                m_cameraMutex.unlock();
+                return;
+            }
         }
-
-
+        m_cameraQueue.dequeue();
+        int frameStatus = frame->Status;
         m_cameraMutex.unlock();
-// --- cam
+// --- camera
 
-        msleep(1);
+// +++ queue
+        // enqueue the finished frame to the output queue
+        m_queueMutex.lock();
+        m_outputQueue.enqueue(frame);
+        m_queueMutex.unlock();
+// --- queue
+
+        emit frameFinished(id++, frameStatus);
     }
 
-// +++ cam
+// +++ camera
     m_cameraMutex.lock();
-
     if (!m_camera->stopAcquisition())
         emit error(m_camera->errorString());
 
@@ -225,7 +341,6 @@ void Recorder::run()
 
     if (!m_camera->stopCapturing())
         emit error(m_camera->errorString());
-
     m_cameraMutex.unlock();
-// --- cam
+// --- camera
 }

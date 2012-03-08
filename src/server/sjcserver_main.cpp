@@ -41,11 +41,13 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
     app.setApplicationName(QFileInfo(app.arguments()[0]).fileName());
 
+    // register types which are used as slot arguments
+    qRegisterMetaType<tPvFrame *>("tPvFrame *");
+
     // use custom signal handler for SIGINT and SIGTERM to perform a clean
     // shutdown on CTRL+C or 'kill -15'
     std::signal(SIGINT, exitHandler);
     std::signal(SIGTERM, exitHandler);
-
 
     CmdLineOptions opts;
     if (!opts.parse() || opts.help)

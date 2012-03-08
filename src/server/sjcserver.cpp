@@ -26,6 +26,7 @@
 
 #include "sjcserver.h"
 #include "recorder.h"
+#include "imagestreamer.h"
 #include "pvutils.h"
 #include "version.h"
 #include <QtCore/QtCore>
@@ -34,6 +35,8 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
     : QObject(parent),
       cout(stdout, QIODevice::WriteOnly),
       m_recorder(new Recorder),
+      m_imageStreamer(new ImageStreamer),
+      m_imageStreamerThread(new QThread),
       m_dcp(new Dcp::Client),
       m_serverName("localhost"),
       m_serverPort(2001),
@@ -51,12 +54,19 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
                    SLOT(dcpStateChanged(Dcp::Client::State)));
     connect(m_dcp, SIGNAL(messageReceived()), SLOT(dcpMessageReceived()));
 
-    connect(m_recorder, SIGNAL(frameDone(ulong,int)),
-                        SLOT(recorderFrameDone(ulong,int)));
+    connect(m_recorder, SIGNAL(frameFinished(ulong,int)),
+                        SLOT(recorderFrameFinished(ulong,int)));
     connect(m_recorder, SIGNAL(info(QString)), SLOT(recorderInfo(QString)));
     connect(m_recorder, SIGNAL(error(QString)), SLOT(recorderError(QString)));
     connect(m_recorder, SIGNAL(started()), SLOT(recorderStarted()));
     connect(m_recorder, SIGNAL(finished()), SLOT(recorderStopped()));
+
+    connect(m_imageStreamer, SIGNAL(frameFinished(tPvFrame*)),
+                             SLOT(streamerFrameFinished(tPvFrame*)));
+    connect(m_imageStreamer, SIGNAL(info(QString)), SLOT(streamerInfo(QString)));
+    connect(m_imageStreamer, SIGNAL(error(QString)), SLOT(streamerError(QString)));
+    connect(m_imageStreamerThread, SIGNAL(started()), SLOT(streamerThreadStarted()));
+    connect(m_imageStreamerThread, SIGNAL(finished()), SLOT(streamerThreadFinished()));
 
     if (!m_configFileName.isEmpty())
         loadConfigFile();
@@ -70,6 +80,9 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
         m_cameraId = opts.cameraId;
     if (opts.verbose != -1)
         m_verbose = bool(opts.verbose);
+
+    m_imageStreamerThread->start();
+    m_imageStreamer->moveToThread(m_imageStreamerThread);
 }
 
 SjcServer::~SjcServer()
@@ -81,15 +94,31 @@ SjcServer::~SjcServer()
     m_recorder->wait();
     m_recorder->closeCamera();
 
+    m_imageStreamerThread->quit();
+    m_imageStreamerThread->wait();
+
     delete m_dcp;
     delete m_recorder;
+    delete m_imageStreamer;
+    delete m_imageStreamerThread;
 
     PvUnInitialize();
 }
 
 bool SjcServer::openCamera()
 {
-    return m_recorder->openCamera(m_cameraId);
+    //return m_recorder->openCamera(m_cameraId);
+
+    // test
+    bool ok = m_recorder->openCamera(m_cameraId);
+    if (ok) {
+        m_recorder->setAttribute("FrameStartTriggerMode", "FixedRate");
+        m_recorder->setAttribute("FrameRate", 5);
+        m_recorder->setAttribute("ExposureValue", 150000);
+        m_recorder->setAttribute("PixelFormat", "Mono16");
+        QTimer::singleShot(1000, m_recorder, SLOT(start()));
+    }
+    return ok;
 }
 
 void SjcServer::connectToDcpServer()
@@ -270,7 +299,7 @@ void SjcServer::dcpMessageReceived()
     sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
 }
 
-void SjcServer::recorderFrameDone(ulong id, int status)
+void SjcServer::recorderFrameFinished(ulong id, int status)
 {
     switch (status)
     {
@@ -287,9 +316,13 @@ void SjcServer::recorderFrameDone(ulong id, int status)
         cout << "M";
         break;
     default:
-        break;
+        cout << "?";
     }
     cout.flush();
+
+    tPvFrame *frame = m_recorder->readFinishedFrame();
+    QMetaObject::invokeMethod(m_imageStreamer, "processFrame",
+                              Q_ARG(tPvFrame *, frame));
 }
 
 void SjcServer::recorderInfo(const QString &infoString)
@@ -310,4 +343,29 @@ void SjcServer::recorderStarted()
 void SjcServer::recorderStopped()
 {
     cout << "Capture thread stopped." << endl;
+}
+
+void SjcServer::streamerFrameFinished(tPvFrame *frame)
+{
+    m_recorder->enqueueFrame(frame);
+}
+
+void SjcServer::streamerInfo(const QString &infoString)
+{
+    cout << infoString << endl;
+}
+
+void SjcServer::streamerError(const QString &errorString)
+{
+    cout << "Error:" << errorString << endl;
+}
+
+void SjcServer::streamerThreadStarted()
+{
+    cout << "Streaming server started." << endl;
+}
+
+void SjcServer::streamerThreadFinished()
+{
+    cout << "Streaming server stopped." << endl;
 }

@@ -24,68 +24,44 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SJCAM_RECORDER_H
-#define SJCAM_RECORDER_H
+#ifndef SJCAM_IMAGESTREAMER_H
+#define SJCAM_IMAGESTREAMER_H
 
-#include <QtCore/QThread>
-#include <QtCore/QMutex>
-#include <QtCore/QReadWriteLock>
-#include <QtCore/QQueue>
+#include <QtCore/QObject>
+#include <QtCore/QList>
+#include <QtCore/QVector>
+#include <QtGui/QImage>
 #include <PvApi.h>
 
-class Camera;
+class QString;
+class QTcpServer;
+class QTcpSocket;
 
-class Recorder : public QThread
+class ImageStreamer : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit Recorder(QObject *parent = 0);
-    ~Recorder();
-
-    bool openCamera(ulong cameraId = 0);
-    bool closeCamera();
-    bool isCameraOpen() const;
-
-    bool getAttribute(const QByteArray &name, QVariant *value) const;
-    bool setAttribute(const QByteArray &name, const QVariant &value);
-
-    bool hasFinishedFrame() const;
-    tPvFrame * readFinishedFrame();
-    void enqueueFrame(tPvFrame *frame);
-
-    bool isStopRequested() const;
+    explicit ImageStreamer(QObject *parent = 0);
+    ~ImageStreamer();
 
 public slots:
-    void start();
-    void stop();
+    void processFrame(tPvFrame *frame);
 
 signals:
-    void frameFinished(ulong id, int status);
+    void frameFinished(tPvFrame *frame);
     void info(const QString &infoString) const;
     void error(const QString &errorString) const;
 
 protected:
-    void allocateFrames();
-    void clearFrameQueues();
-    void run();
+    void renderImage(tPvFrame *frame);
 
 private:
-    Q_DISABLE_COPY(Recorder)
-    mutable QMutex m_cameraMutex;
-    mutable QMutex m_queueMutex;
-    mutable QReadWriteLock m_stopRequestLock;
-    Camera * const m_camera;
-    QQueue<tPvFrame *> m_cameraQueue;
-    QQueue<tPvFrame *> m_inputQueue;
-    QQueue<tPvFrame *> m_outputQueue;
-    bool m_stopRequested;
-    int m_numFrames;
+    Q_DISABLE_COPY(ImageStreamer)
+    QTcpServer * const m_tcpServer;
+    QList<QTcpSocket *> m_socketList;
+    QImage m_image;
+    QVector<QRgb> m_colorTable;
 };
 
-inline bool Recorder::isStopRequested() const {
-    QReadLocker locker(&m_stopRequestLock);
-    return m_stopRequested;
-}
-
-#endif // SJCAM_RECORDER_H
+#endif // SJCAM_IMAGESTREAMER_H

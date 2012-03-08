@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # Find libraries
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-find_package(Qt4 4.7.0 COMPONENTS QtCore QtNetwork REQUIRED)
+find_package(Qt4 4.7.0 COMPONENTS QtCore QtGui QtNetwork REQUIRED)
 
 find_package(DcpClient)
 if(DCPCLIENT_FOUND)
