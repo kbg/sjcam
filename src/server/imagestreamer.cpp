@@ -33,6 +33,8 @@ ImageStreamer::ImageStreamer(QObject *parent)
     : QObject(parent),
       m_tcpServer(new QTcpServer)
 {
+
+
     m_colorTable.resize(256);
     for (int j = 0; j < 256; ++j)
         m_colorTable[j] = qRgb(j, j, j);
@@ -53,7 +55,7 @@ void ImageStreamer::processFrame(tPvFrame *frame)
 
     renderImage(frame);
 
-    m_image.save(QString("img_%1.jpg").arg(frame->FrameCount, 4, 10, QChar('0')));
+    //m_image.save(QString("img_%1.jpg").arg(frame->FrameCount, 4, 10, QChar('0')));
     //m_image.save("img_x.jpg");
 
     emit frameFinished(frame);
@@ -98,4 +100,9 @@ void ImageStreamer::renderImage(tPvFrame *frame)
         m_image.fill(0);
         emit error("Cannot render image, unsupported bit depth.");
     }
+}
+
+void ImageStreamer::newConnection()
+{
+
 }

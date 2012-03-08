@@ -14,9 +14,15 @@ set(sjcserver_SRCS
     camera.cpp
     recorder.cpp
     imagestreamer.cpp
+    imagewriter.cpp
 )
 qt4_automoc(${sjcserver_SRCS})
-qt4_wrap_cpp(sjcserver_MOC_SRCS sjcserver.h recorder.h imagestreamer.h)
+qt4_wrap_cpp(sjcserver_MOC_SRCS
+    sjcserver.h
+    recorder.h
+    imagestreamer.h
+    imagewriter.h
+)
 
 add_executable(sjcserver ${sjcserver_SRCS} ${sjcserver_MOC_SRCS})
 target_link_libraries(sjcserver

@@ -37,6 +37,7 @@
 
 class Recorder;
 class ImageStreamer;
+class ImageWriter;
 class QThread;
 
 class SjcServer : public QObject
@@ -57,21 +58,24 @@ protected:
     void sendMessage(const Dcp::Message &message);
 
 protected slots:
+    void printInfo(const QString &infoString);
+    void printError(const QString &errorString);
+
     void dcpError(Dcp::Client::Error error);
     void dcpStateChanged(Dcp::Client::State state);
     void dcpMessageReceived();
 
     void recorderFrameFinished(ulong id, int status);
-    void recorderInfo(const QString &infoString);
-    void recorderError(const QString &errorString);
     void recorderStarted();
     void recorderStopped();
 
-    void streamerFrameFinished(tPvFrame *frame);
-    void streamerInfo(const QString &infoString);
-    void streamerError(const QString &errorString);
     void streamerThreadStarted();
     void streamerThreadFinished();
+
+    void writerFrameFinished(tPvFrame *frame);
+    void writerThreadStarted();
+    void writerThreadFinished();
+
 
 private:
     Q_DISABLE_COPY(SjcServer)
@@ -79,6 +83,8 @@ private:
     Recorder * const m_recorder;
     ImageStreamer * const m_imageStreamer;
     QThread * const m_imageStreamerThread;
+    ImageWriter * const m_imageWriter;
+    QThread * const m_imageWriterThread;
     Dcp::Client * const m_dcp;
     Dcp::CommandParser m_command;
     QString m_serverName;

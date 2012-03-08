@@ -27,6 +27,7 @@
 #include "sjcserver.h"
 #include "recorder.h"
 #include "imagestreamer.h"
+#include "imagewriter.h"
 #include "pvutils.h"
 #include "version.h"
 #include <QtCore/QtCore>
@@ -37,6 +38,8 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
       m_recorder(new Recorder),
       m_imageStreamer(new ImageStreamer),
       m_imageStreamerThread(new QThread),
+      m_imageWriter(new ImageWriter),
+      m_imageWriterThread(new QThread),
       m_dcp(new Dcp::Client),
       m_serverName("localhost"),
       m_serverPort(2001),
@@ -56,17 +59,29 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
 
     connect(m_recorder, SIGNAL(frameFinished(ulong,int)),
                         SLOT(recorderFrameFinished(ulong,int)));
-    connect(m_recorder, SIGNAL(info(QString)), SLOT(recorderInfo(QString)));
-    connect(m_recorder, SIGNAL(error(QString)), SLOT(recorderError(QString)));
+    connect(m_recorder, SIGNAL(info(QString)), SLOT(printInfo(QString)));
+    connect(m_recorder, SIGNAL(error(QString)), SLOT(printError(QString)));
     connect(m_recorder, SIGNAL(started()), SLOT(recorderStarted()));
     connect(m_recorder, SIGNAL(finished()), SLOT(recorderStopped()));
 
+    connect(m_imageStreamer, SIGNAL(info(QString)), SLOT(printInfo(QString)));
+    connect(m_imageStreamer, SIGNAL(error(QString)), SLOT(printError(QString)));
+    connect(m_imageStreamerThread, SIGNAL(started()),
+                                   SLOT(streamerThreadStarted()));
+    connect(m_imageStreamerThread, SIGNAL(finished()),
+                                   SLOT(streamerThreadFinished()));
+
+    connect(m_imageWriter, SIGNAL(frameFinished(tPvFrame*)),
+                           SLOT(writerFrameFinished(tPvFrame*)));
+    connect(m_imageWriter, SIGNAL(info(QString)), SLOT(printInfo(QString)));
+    connect(m_imageWriter, SIGNAL(error(QString)), SLOT(printError(QString)));
+    connect(m_imageWriterThread, SIGNAL(started()),
+                                 SLOT(writerThreadStarted()));
+    connect(m_imageWriterThread, SIGNAL(finished()),
+                                 SLOT(writerThreadFinished()));
+
     connect(m_imageStreamer, SIGNAL(frameFinished(tPvFrame*)),
-                             SLOT(streamerFrameFinished(tPvFrame*)));
-    connect(m_imageStreamer, SIGNAL(info(QString)), SLOT(streamerInfo(QString)));
-    connect(m_imageStreamer, SIGNAL(error(QString)), SLOT(streamerError(QString)));
-    connect(m_imageStreamerThread, SIGNAL(started()), SLOT(streamerThreadStarted()));
-    connect(m_imageStreamerThread, SIGNAL(finished()), SLOT(streamerThreadFinished()));
+            m_imageWriter, SLOT(processFrame(tPvFrame*)));
 
     if (!m_configFileName.isEmpty())
         loadConfigFile();
@@ -83,6 +98,9 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
 
     m_imageStreamerThread->start();
     m_imageStreamer->moveToThread(m_imageStreamerThread);
+
+    m_imageWriterThread->start();
+    m_imageWriter->moveToThread(m_imageWriterThread);
 }
 
 SjcServer::~SjcServer()
@@ -96,6 +114,9 @@ SjcServer::~SjcServer()
 
     m_imageStreamerThread->quit();
     m_imageStreamerThread->wait();
+
+    m_imageWriterThread->quit();
+    m_imageWriterThread->wait();
 
     delete m_dcp;
     delete m_recorder;
@@ -169,6 +190,16 @@ void SjcServer::sendMessage(const Dcp::Message &message)
     if (verbose())
         cout << message << endl;
     m_dcp->sendMessage(message);
+}
+
+void SjcServer::printInfo(const QString &infoString)
+{
+    cout << infoString << endl;
+}
+
+void SjcServer::printError(const QString &errorString)
+{
+    cout << "Error: " << errorString << endl;
 }
 
 void SjcServer::dcpError(Dcp::Client::Error error)
@@ -301,39 +332,33 @@ void SjcServer::dcpMessageReceived()
 
 void SjcServer::recorderFrameFinished(ulong id, int status)
 {
-    switch (status)
+    if (verbose())
     {
-    case ePvErrSuccess:
-        cout << ".";
-        break;
-    case ePvErrCancelled:
-        cout << "C";
-        break;
-    case ePvErrDataLost:
-        cout << "L";
-        break;
-    case ePvErrDataMissing:
-        cout << "M";
-        break;
-    default:
-        cout << "?";
+        switch (status)
+        {
+        case ePvErrSuccess:
+            cout << ".";
+            break;
+        case ePvErrCancelled:
+            cout << "C";
+            break;
+        case ePvErrDataLost:
+            cout << "L";
+            break;
+        case ePvErrDataMissing:
+            cout << "M";
+            break;
+        default:
+            cout << "?";
+        }
+        cout.flush();
     }
-    cout.flush();
 
     tPvFrame *frame = m_recorder->readFinishedFrame();
     QMetaObject::invokeMethod(m_imageStreamer, "processFrame",
                               Q_ARG(tPvFrame *, frame));
 }
 
-void SjcServer::recorderInfo(const QString &infoString)
-{
-    cout << infoString << endl;
-}
-
-void SjcServer::recorderError(const QString &errorString)
-{
-    cout << "Error: " << errorString << endl;
-}
 
 void SjcServer::recorderStarted()
 {
@@ -345,27 +370,31 @@ void SjcServer::recorderStopped()
     cout << "Capture thread stopped." << endl;
 }
 
-void SjcServer::streamerFrameFinished(tPvFrame *frame)
-{
-    m_recorder->enqueueFrame(frame);
-}
-
-void SjcServer::streamerInfo(const QString &infoString)
-{
-    cout << infoString << endl;
-}
-
-void SjcServer::streamerError(const QString &errorString)
-{
-    cout << "Error:" << errorString << endl;
-}
-
 void SjcServer::streamerThreadStarted()
 {
-    cout << "Streaming server started." << endl;
+    if (verbose())
+        cout << "Streaming server started." << endl;
 }
 
 void SjcServer::streamerThreadFinished()
 {
-    cout << "Streaming server stopped." << endl;
+    if (verbose())
+        cout << "Streaming server stopped." << endl;
+}
+
+void SjcServer::writerFrameFinished(tPvFrame *frame)
+{
+    m_recorder->enqueueFrame(frame);
+}
+
+void SjcServer::writerThreadStarted()
+{
+    if (verbose())
+        cout << "Writer thread started." << endl;
+}
+
+void SjcServer::writerThreadFinished()
+{
+    if (verbose())
+        cout << "Writer thread stopped." << endl;
 }
