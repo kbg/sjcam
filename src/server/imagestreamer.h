@@ -28,8 +28,9 @@
 #define SJCAM_IMAGESTREAMER_H
 
 #include <QtCore/QObject>
-#include <QtCore/QList>
+#include <QtCore/QMap>
 #include <QtCore/QVector>
+#include <QtCore/QByteArray>
 #include <QtGui/QImage>
 #include <PvApi.h>
 
@@ -56,12 +57,25 @@ signals:
 protected:
     void renderImage(tPvFrame *frame);
 
+protected slots:
+    void newConnection();
+    void socketDisconnected();
+    void socketReadyRead();
+
+protected:
+    struct ClientInfo {
+        QString name;
+        quint16 port;
+        bool imageRequested;
+    };
+
 private:
     Q_DISABLE_COPY(ImageStreamer)
     QTcpServer * const m_tcpServer;
-    QList<QTcpSocket *> m_socketList;
-    QImage m_image;
+    QMap<QTcpSocket *, ClientInfo> m_socketMap;
     QVector<QRgb> m_colorTable;
+    QImage m_image;
+    QByteArray m_jpeg;
 };
 
 #endif // SJCAM_IMAGESTREAMER_H

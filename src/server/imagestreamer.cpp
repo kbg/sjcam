@@ -31,9 +31,10 @@
 
 ImageStreamer::ImageStreamer(QObject *parent)
     : QObject(parent),
-      m_tcpServer(new QTcpServer)
+      m_tcpServer(new QTcpServer(this))
 {
-
+    connect(m_tcpServer, SIGNAL(newConnection()), SLOT(newConnection()));
+    m_tcpServer->listen(QHostAddress::Any, 4711);
 
     m_colorTable.resize(256);
     for (int j = 0; j < 256; ++j)
@@ -44,8 +45,6 @@ ImageStreamer::ImageStreamer(QObject *parent)
 ImageStreamer::~ImageStreamer()
 {
     delete m_tcpServer;
-    foreach (QTcpSocket *socket, m_socketList)
-        delete socket;
 }
 
 void ImageStreamer::processFrame(tPvFrame *frame)
@@ -54,11 +53,10 @@ void ImageStreamer::processFrame(tPvFrame *frame)
         return;
 
     renderImage(frame);
+    emit frameFinished(frame);
 
     //m_image.save(QString("img_%1.jpg").arg(frame->FrameCount, 4, 10, QChar('0')));
     //m_image.save("img_x.jpg");
-
-    emit frameFinished(frame);
 }
 
 void ImageStreamer::renderImage(tPvFrame *frame)
@@ -100,9 +98,76 @@ void ImageStreamer::renderImage(tPvFrame *frame)
         m_image.fill(0);
         emit error("Cannot render image, unsupported bit depth.");
     }
+
+    m_jpeg.clear();
+    QBuffer buffer(&m_jpeg);
+    m_image.save(&buffer, "jpeg");
+
+    QDataStream os;
+    QMutableMapIterator<QTcpSocket *, ClientInfo> iter(m_socketMap);
+    while (iter.hasNext()) {
+        iter.next();
+        if (iter.value().imageRequested) {
+            os.setDevice(iter.key());
+            os << quint32(m_jpeg.size()) << m_jpeg;
+            iter.value().imageRequested = false;
+        }
+    }
 }
 
 void ImageStreamer::newConnection()
 {
+    QTcpSocket *socket = m_tcpServer->nextPendingConnection();
+    connect(socket, SIGNAL(disconnected()), SLOT(socketDisconnected()));
+    connect(socket, SIGNAL(readyRead()), SLOT(socketReadyRead()));
+    Q_ASSERT(!m_socketMap.contains(socket));
 
+    ClientInfo clientInfo = {
+        socket->peerAddress().toString(),
+        socket->peerPort()
+    };
+    m_socketMap.insert(socket, clientInfo);
+    emit info(QString("Streaming client %1:%2 connected.")
+              .arg(clientInfo.name).arg(clientInfo.port));
+}
+
+void ImageStreamer::socketDisconnected()
+{
+    QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
+    if (!socket) {
+        qWarning("ImageStreamer::socketDisconnected(): Invalid sender.");
+        return;
+    }
+
+    if (!m_socketMap.contains(socket)) {
+        qWarning("ImageStreamer::socketDisconnected(): Unknown socket.");
+        return;
+    }
+
+    ClientInfo clientInfo = m_socketMap.value(socket);
+    emit info(QString("Streaming client %1:%2 disconnected.")
+              .arg(clientInfo.name).arg(clientInfo.port));
+
+    m_socketMap.remove(socket);
+    socket->deleteLater();
+}
+
+void ImageStreamer::socketReadyRead()
+{
+    QTcpSocket *socket = qobject_cast<QTcpSocket *>(sender());
+    if (!socket) {
+        qWarning("ImageStreamer::socketReadyRead(): Invalid sender.");
+        return;
+    }
+
+    if (!m_socketMap.contains(socket)) {
+        qWarning("ImageStreamer::socketReadyRead(): Unknown socket.");
+        return;
+    }
+
+    // any data sent to us is interpreted as an image request, so we remove
+    // all pending data from the input buffer and cache the request to send
+    // an image back as soon as a new one is available
+    socket->readAll();
+    m_socketMap[socket].imageRequested = true;
 }
