@@ -10,6 +10,11 @@ set(SJCAM_COPYRIGHT_STRING "Copyright (c) 2012 Kolja Glogowski\\nKiepenheuer-Ins
 configure_file(src/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+# Build options
+option(BUILD_SERVER "Build Sjcam server." TRUE)
+option(BUILD_CLIENT "Build Sjcam client." TRUE)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
 # Find libraries
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -23,32 +28,28 @@ else()
     message(FATAL_ERROR "DcpClient not found")
 endif()
 
+if(BUILD_SERVER)
+    find_package(CFITSIO)
+    if(CFITSIO_FOUND)
+        include_directories(${CFITSIO_INCLUDE_DIR})
+        link_directories(${CFITSIO_LINK_DIRECTORIES})
+    else()
+        message(FATAL_ERROR "CFITSIO not found")
+    endif()
 
-find_package(CFITSIO)
-if(CFITSIO_FOUND)
-    include_directories(${CFITSIO_INCLUDE_DIR})
-    link_directories(${CFITSIO_LINK_DIRECTORIES})
-else()
-    message(FATAL_ERROR "CFITSIO not found")
+    find_package(Prosilica)
+    if(PROSILICA_FOUND)
+        # Defines needed for PvApi.h
+        set(PROSILICA_OS LINUX CACHE STRING "The target operating sytem, see PvAPI.h")
+        set(PROSILICA_CPU x64 CACHE STRING "The target cpu type, see PvAPI.h")
+        mark_as_advanced(PROSILICA_OS PROSILICA_CPU)
+        add_definitions(-D_${PROSILICA_OS} -D_${PROSILICA_CPU})
+        include_directories(${PROSILICA_INCLUDE_DIR})
+        link_directories(${PROSILICA_LINK_DIRECTORIES})
+    else()
+        message(FATAL_ERROR "Prosilica API not found")
+    endif()
 endif()
-
-find_package(Prosilica)
-if(PROSILICA_FOUND)
-    # Defines needed for PvApi.h
-    set(PROSILICA_OS LINUX CACHE STRING "The target operating sytem, see PvAPI.h")
-    set(PROSILICA_CPU x64 CACHE STRING "The target cpu type, see PvAPI.h")
-    mark_as_advanced(PROSILICA_OS PROSILICA_CPU)
-    add_definitions(-D_${PROSILICA_OS} -D_${PROSILICA_CPU})
-    include_directories(${PROSILICA_INCLUDE_DIR})
-    link_directories(${PROSILICA_LINK_DIRECTORIES})
-else()
-    message(FATAL_ERROR "Prosilica API not found")
-endif()
-
-# Build options
-option(BUILD_SERVER "Build Sjcam server." TRUE)
-option(BUILD_CLIENT "Build Sjcam client." TRUE)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 # Build
 add_subdirectory(src)
