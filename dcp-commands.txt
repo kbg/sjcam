@@ -1,0 +1,107 @@
+Server:
+    set nop
+        returns: FIN
+
+    set notify ( true | false )
+        returns: FIN
+
+    set camera ( open | close )
+        returns: FIN
+        errcodes: 1 -> cannot open/close camera
+
+    set capturing ( start | stop )
+        errcodes: 1 -> cannot start/stop capturing
+
+    set exposure <usecs>
+        returns: FIN
+        errorcodes: 1 -> cannot set exposure value
+
+    set framerate <Hz>
+        returns: FIN
+        errorcodes: 1 -> cannot set framerate value
+
+    set roi <left> <top> <width> <height>
+        returns: FIN
+        errorcodes: 1 -> cannot set roi values
+
+    set xbinning <pixels>
+        returns: FIN
+        errorcodes: 1 -> cannot set x-binning value
+        note: this affects roi and maximagesize
+
+    set ybinning <pixels>
+        returns: FIN
+        errorcodes: 1 -> cannot set y-binning value
+        note: this affects roi and maximagesize
+
+    set binning <xbinning> <ybinning>
+        returns: FIN
+        errcodes: 1 -> cannot set x-binning value
+                  2 -> cannot set y-binning value
+                  3 -> cannot set any binning values
+
+    get notify
+        returns: ( true | false )
+
+    get camerastate
+        returns: ( closed | opened | capturing )
+
+    get exposure
+        returns: <usecs>
+        errorcodes: 1 -> cannot get exposure value
+
+    get exposure_range
+        returns: <min> <max>
+        errorcodes: 1 -> cannot get range values
+
+    get framerate
+        returns: <Hz>
+        errorcodes: 1 -> cannot get framerate value
+
+    get framerate_range
+        returns: <min> <max>
+        errorcodes: 1 -> cannot get range values
+
+    get roi
+        returns: <left> <top> <width> <height>
+        errorcodes: 1 -> cannot get roi values
+
+    get maximagesize
+        returns: <width> <height>
+        errorcodes: 1 -> cannot get image size
+
+    get xbinning
+        returns: <pixels>
+        errorcodes: 1 -> cannot get x-binning value
+
+    get ybinning
+        returns: <pixels>
+        errorcodes: 1 -> cannot get y-binning value
+
+    get binning
+        returns: <xbinning> <ybinning>
+        errcodes: 1 -> cannot get x-binning value
+                  2 -> cannot get y-binning value
+                  3 -> cannot get any binning values
+
+    get streaminghost
+        returns: <IP address> <port>
+
+    get version
+        returns: <server version>
+
+    get pvversion
+        returns: <pvapi version>
+
+Client:
+    set nop
+    set camerastate ( closed | opened | capturing )
+    set exposure <msecs>
+    set framerate <Hz>
+    set roi <left> <top> <width> <height>
+    set maximagesize <width> <height>
+    set binning <xbinning> <ybinning>
+        returns: FIN
+
+    get version
+        returns: <client version>

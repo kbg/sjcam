@@ -76,7 +76,6 @@ protected slots:
     void writerThreadStarted();
     void writerThreadFinished();
 
-
 private:
     Q_DISABLE_COPY(SjcServer)
     QTextStream cout;

@@ -31,6 +31,7 @@
 #include "pvutils.h"
 #include "version.h"
 #include <QtCore/QtCore>
+#include <QtNetwork/QHostAddress>
 
 SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
     : QObject(parent),
@@ -135,9 +136,9 @@ bool SjcServer::openCamera()
     if (ok) {
         m_recorder->setAttribute("FrameStartTriggerMode", "FixedRate");
         m_recorder->setAttribute("FrameRate", 5);
-        m_recorder->setAttribute("ExposureValue", 150000);
+        m_recorder->setAttribute("ExposureValue", 30000);
         m_recorder->setAttribute("PixelFormat", "Mono16");
-        QTimer::singleShot(1000, m_recorder, SLOT(start()));
+        QTimer::singleShot(0, m_recorder, SLOT(start()));
     }
     return ok;
 }
@@ -204,6 +205,7 @@ void SjcServer::printError(const QString &errorString)
 
 void SjcServer::dcpError(Dcp::Client::Error error)
 {
+    Q_UNUSED(error);
     cout << "DCP Error: " << m_dcp->errorString() << "." << endl;
 }
 
@@ -216,8 +218,9 @@ void SjcServer::dcpStateChanged(Dcp::Client::State state)
              << m_dcp->serverPort() << "]..." << endl;
         break;
     case Dcp::Client::ConnectedState:
-        cout << "Connected to DCP server [" << m_dcp->deviceName() << "]."
-             << endl;
+        cout << "Connected to DCP server [" << m_dcp->deviceName()
+             << "@" << m_dcp->serverName() << ":" << m_dcp->serverPort()
+             << "]." << endl;
         break;
     case Dcp::Client::UnconnectedState:
         cout << "Disconnected from DCP server." << endl;
@@ -248,6 +251,7 @@ void SjcServer::dcpMessageReceived()
     if (cmdType == Dcp::CommandParser::SetCmd)
     {
         // set nop
+        //     returns: FIN
         if (identifier == "nop")
         {
             if (m_command.hasArguments()) {
@@ -255,16 +259,213 @@ void SjcServer::dcpMessageReceived()
                 return;
             }
             sendMessage(msg.ackMessage());
-
-            if (!m_recorder->isRunning())
-                m_recorder->start();
-            else
-                m_recorder->stop();
             sendMessage(msg.replyMessage());
             return;
         }
 
-        // set attr name value
+        // set camera ( open | close )
+        //     errcodes: 1 -> cannot open/close camera
+        if (identifier == "camera")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool open;
+            QByteArray arg = m_command.arguments()[0];
+            if (arg == "open")
+                open = true;
+            else if (arg == "close")
+                open = false;
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            if (open && m_recorder->isCameraOpen()) {
+                sendMessage(msg.ackMessage(Dcp::AckWrongModeError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            int errcode = 0;
+            if (open)
+                errcode = m_recorder->openCamera(m_cameraId) ? 0 : 1;
+            else if (m_recorder->isCameraOpen()) {
+                if (m_recorder->isRunning()) {
+                    m_recorder->stop();
+                    m_recorder->wait();
+                }
+                errcode = m_recorder->closeCamera() ? 0 : 1;
+            }
+            sendMessage(msg.replyMessage(QByteArray(), errcode));
+            return;
+        }
+
+
+        // set capturing ( start | stop )
+        //     errcodes: 1 -> cannot start/stop capturing
+        if (identifier == "capturing")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool start;
+            QByteArray arg = m_command.arguments()[0];
+            if (arg == "start")
+                start = true;
+            else if (arg == "stop")
+                start = false;
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            // wrong mode, when trying to start capturing while the camera
+            // is not opened yet or the capture thread is already running
+            if (start && (!m_recorder->isCameraOpen() ||
+                           m_recorder->isRunning())) {
+                sendMessage(msg.ackMessage(Dcp::AckWrongModeError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            if (start)
+                m_recorder->start();
+            else if (m_recorder->isRunning())
+                m_recorder->stop();
+
+            // Note: errorcode 1 cannot be returned without waiting for the
+            // Recorder::started() signal; for now we always return errcode 0.
+            sendMessage(msg.replyMessage());
+            return;
+        }
+
+        // set exposure <usecs>
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set exposure value
+        if (identifier == "exposure")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool ok;
+            quint32 value = m_command.arguments()[0].toUInt(&ok);
+            if (!ok) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            int errcode = 0;
+            if (!m_recorder->setAttribute("ExposureValue", value))
+                errcode = 1;
+            sendMessage(msg.replyMessage(QByteArray(), errcode));
+            return;
+        }
+
+        // set framerate <Hz>
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set framerate value
+        if (identifier == "framerate")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool ok;
+            float value = m_command.arguments()[0].toFloat(&ok);
+            if (!ok || value < 0) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            int errcode = 0;
+            if (!m_recorder->setAttribute("FrameRate", value))
+                errcode = 1;
+            sendMessage(msg.replyMessage(QByteArray(), errcode));
+            return;
+        }
+
+        // set roi <left> <top> <width> <height>
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set roi values
+        if (identifier == "roi")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // set xbinning <pixels>
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set x-binning value
+        //     note: this affects roi and maximagesize
+        if (identifier == "xbinning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // set ybinning <pixels>
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set y-binning value
+        //     note: this affects roi and maximagesize
+        if (identifier == "ybinning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // set binning <xbinning> <ybinning>
+        //     returns: FIN
+        //     errcodes: 1 -> cannot set x-binning value
+        //               2 -> cannot set y-binning value
+        //               3 -> cannot set any binning values
+        if (identifier == "binning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // set verbose ( true | false )
+        //     note: for debugging
+        if (identifier == "verbose")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool verbose;
+            QByteArray arg = m_command.arguments()[0];
+            if (arg == "true" || arg == "1")
+                verbose = true;
+            else if (arg == "false" || arg == "0")
+                verbose = false;
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            m_verbose = verbose;
+            sendMessage(msg.replyMessage());
+            return;
+        }
+
+        // set pvattr <name> <value>
+        //     note: for debugging only!
         if (identifier == "pvattr")
         {
             if (m_command.numArguments() != 2) {
@@ -273,17 +474,203 @@ void SjcServer::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
 
+            int errcode = 0;
             QList<QByteArray> args = m_command.arguments();
-            if (m_recorder->setAttribute(args[0], args[1]))
-                sendMessage(msg.replyMessage());
-            else
-                sendMessage(msg.replyMessage(QByteArray(), 1));
+            if (!m_recorder->setAttribute(args[0], args[1]))
+                errcode = 1;
+            sendMessage(msg.replyMessage(QByteArray(), errcode));
             return;
         }
     }
     else if (cmdType == Dcp::CommandParser::GetCmd)
     {
-        // get attr name
+        // get camerastate
+        //     returns: ( closed | opened | capturing )
+        if (identifier == "camerastate")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            QByteArray state;
+            if (m_recorder->isCameraOpen())
+                state = m_recorder->isRunning() ? "capturing" : "opened";
+            else
+                state = "closed";
+            sendMessage(msg.replyMessage(state));
+            return;
+        }
+
+        // get exposure
+        //     returns: <usecs>
+        //     errorcodes: 1 -> cannot get exposure value
+        if (identifier == "exposure")
+        {
+            // not implemented yet
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            QVariant value;
+            if (!m_recorder->getAttribute("ExposureValue", &value) ||
+                    !value.canConvert(QVariant::UInt)) {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                return;
+            }
+            sendMessage(msg.replyMessage(QByteArray::number(value.toUInt())));
+            return;
+        }
+
+        // get exposure_range
+        //     returns: <min> <max>
+        //     errorcodes: 1 -> cannot get range values
+        if (identifier == "exposure_range")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get framerate
+        //     returns: <Hz>
+        //     errorcodes: 1 -> cannot get framerate value
+        if (identifier == "framerate")
+        {
+            // not implemented yet
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            QVariant value;
+            if (!m_recorder->getAttribute("FrameRate", &value) ||
+                    !value.canConvert(QVariant::Double)) {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                return;
+            }
+            sendMessage(msg.replyMessage(
+                            QByteArray::number(value.toFloat(), 'f', 3)));
+            return;
+        }
+
+        // get framerate_range
+        //     returns: <min> <max>
+        //     errorcodes: 1 -> cannot get range values
+        if (identifier == "framerate_range")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get roi
+        //     returns: <left> <top> <width> <height>
+        //     errorcodes: 1 -> cannot get roi values
+        if (identifier == "roi")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get maximagesize
+        //     returns: <width> <height>
+        //     errorcodes: 1 -> cannot get image size
+        if (identifier == "maximagesize")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get xbinning
+        //     returns: <pixels>
+        //     errorcodes: 1 -> cannot get x-binning value
+        if (identifier == "xbinning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get ybinning
+        //     returns: <pixels>
+        //     errorcodes: 1 -> cannot get y-binning value
+        if (identifier == "ybinning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get binning
+        //     returns: <xbinning> <ybinning>
+        //     errcodes: 1 -> cannot get x-binning value
+        //               2 -> cannot get y-binning value
+        //               3 -> cannot get any binning values
+        if (identifier == "binning")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get streaminghost
+        //     returns: <IP address> <port>
+        if (identifier == "streaminghost")
+        {
+            // not implemented yet
+            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get version
+        //     returns: <server version>
+        if (identifier == "version")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            sendMessage(msg.replyMessage(SJCAM_VERSION_STRING));
+            return;
+        }
+
+        // get pvversion
+        //     returns: <pvapi version>
+        if (identifier == "pvversion")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            sendMessage(msg.replyMessage(PvVersionString().toAscii()));
+            return;
+        }
+
+        // get verbose
+        //     returns: ( true | false )
+        //     note: for debugging
+        if (identifier == "verbose")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            sendMessage(msg.replyMessage(verbose() ? "true" : "false"));
+            return;
+        }
+
+        // get pvattr <name>
+        //     note: for debugging only!
         if (identifier == "pvattr")
         {
             if (m_command.numArguments() != 1) {
@@ -298,30 +685,6 @@ void SjcServer::dcpMessageReceived()
                 sendMessage(msg.replyMessage(value.toByteArray()));
             else
                 sendMessage(msg.replyMessage(QByteArray(), 1));
-            return;
-        }
-
-        // get version
-        if (identifier == "version")
-        {
-            if (m_command.hasArguments()) {
-                sendMessage(msg.ackMessage(Dcp::AckParameterError));
-                return;
-            }
-            sendMessage(msg.ackMessage());
-            sendMessage(msg.replyMessage(SJCAM_VERSION_STRING));
-            return;
-        }
-
-        // get pvversion
-        if (identifier == "pvversion")
-        {
-            if (m_command.hasArguments()) {
-                sendMessage(msg.ackMessage(Dcp::AckParameterError));
-                return;
-            }
-            sendMessage(msg.ackMessage());
-            sendMessage(msg.replyMessage(PvVersionString().toAscii()));
             return;
         }
     }
