@@ -103,7 +103,7 @@ bool Camera::open(ulong cameraId)
     }
 
     if (!getAttrString("DeviceIPAddress", &m_ipAddress) ||
-            !getAttrString("DeviceEthAddress", &m_macAddress) ||
+            !getAttrString("DeviceEthAddress", &m_hwAddress) ||
             !getAttrUint32("SensorWidth", &m_sensorWidth) ||
             !getAttrUint32("SensorHeight", &m_sensorHeight) ||
             !getAttrUint32("SensorBits", &m_sensorBits))
@@ -478,8 +478,8 @@ QString Camera::infoString() const
        << "\n    ModelName ......... " << m_cameraInfo.ModelName
        << "\n    SerialNumber ...... " << m_cameraInfo.SerialNumber
        << "\n    FirmwareVersion ... " << m_cameraInfo.FirmwareVersion
-       << "\n    MAC Address ....... " << m_macAddress
-       << "\n    IP Address ........ " << m_ipAddress
+       << "\n    HwAddress ......... " << m_hwAddress
+       << "\n    IpAddress ......... " << m_ipAddress
        << "\n    Sensor ............ " << m_sensorWidth << "x"
                                        << m_sensorHeight << "@"
                                        << m_sensorBits;
@@ -489,7 +489,7 @@ QString Camera::infoString() const
 void Camera::clearInfo()
 {
     qMemSet(&m_cameraInfo, 0, sizeof(m_cameraInfo));
-    m_macAddress.clear();
+    m_hwAddress.clear();
     m_ipAddress.clear();
     m_sensorWidth = 0;
     m_sensorHeight = 0;

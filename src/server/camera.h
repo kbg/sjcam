@@ -71,8 +71,8 @@ public:
 
     tPvHandle device() const { return m_device; }
     tPvCameraInfoEx cameraInfo() const { return m_cameraInfo; }
-    QString macAddress() const { return m_macAddress; }
-    QString ipAddress() const { return m_macAddress; }
+    QString hwAddress() const { return m_hwAddress; }
+    QString ipAddress() const { return m_ipAddress; }
     uint sensorWidth() const { return m_sensorWidth; }
     uint sensorHeight() const { return m_sensorHeight; }
     uint sensorBits() const { return m_sensorBits; }
@@ -91,7 +91,7 @@ private:
     mutable QString m_errorString;
     tPvHandle m_device;
     tPvCameraInfoEx m_cameraInfo;
-    QByteArray m_macAddress;
+    QByteArray m_hwAddress;
     QByteArray m_ipAddress;
     quint32 m_sensorWidth;
     quint32 m_sensorHeight;
