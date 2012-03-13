@@ -24,17 +24,17 @@ Server:
         returns: FIN
         errorcodes: 1 -> cannot set roi values
 
-    set xbinning <pixels>
+    set binningx <pixels>
         returns: FIN
         errorcodes: 1 -> cannot set x-binning value
         note: this affects roi and maximagesize
 
-    set ybinning <pixels>
+    set binningy <pixels>
         returns: FIN
         errorcodes: 1 -> cannot set y-binning value
         note: this affects roi and maximagesize
 
-    set binning <xbinning> <ybinning>
+    set binning <xbin> <ybin>
         returns: FIN
         errcodes: 1 -> cannot set x-binning value
                   2 -> cannot set y-binning value
@@ -70,16 +70,8 @@ Server:
         returns: <width> <height>
         errorcodes: 1 -> cannot get image size
 
-    get xbinning
-        returns: <pixels>
-        errorcodes: 1 -> cannot get x-binning value
-
-    get ybinning
-        returns: <pixels>
-        errorcodes: 1 -> cannot get y-binning value
-
     get binning
-        returns: <xbinning> <ybinning>
+        returns: <xbin> <ybin>
         errcodes: 1 -> cannot get x-binning value
                   2 -> cannot get y-binning value
                   3 -> cannot get any binning values

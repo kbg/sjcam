@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     {
         cout << "PvApi Version: " << PvVersionString() << endl;
         cout << "Searching for cameras..." << endl;
-        CameraInfoList cameraList = availablePvCameras(5000);
+        CameraInfoList cameraList = availablePvCameras();
 
         if (cameraList.isEmpty()) {
             cout << "Error: No cameras found." << endl;

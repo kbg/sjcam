@@ -33,12 +33,19 @@
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include <QtCore/QTextStream>
+#include <QtCore/QVariant>
+#include <QtCore/QList>
 #include <PvApi.h>
 
 class Recorder;
 class ImageStreamer;
 class ImageWriter;
 class QThread;
+
+struct CamAttr {
+    QByteArray name;
+    QVariant value;
+};
 
 class SjcServer : public QObject
 {
@@ -90,7 +97,9 @@ private:
     quint16 m_serverPort;
     QByteArray m_deviceName;
     ulong m_cameraId;
+    int m_numBuffers;
     QString m_configFileName;
+    QList<CamAttr> m_camAttrList;
     bool m_verbose;
 };
 

@@ -46,6 +46,7 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
       m_serverPort(2001),
       m_deviceName("sjcam"),
       m_cameraId(0),
+      m_numBuffers(10),
       m_configFileName(opts.configFileName),
       m_verbose(false)
 {
@@ -97,6 +98,8 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
     if (opts.verbose != -1)
         m_verbose = bool(opts.verbose);
 
+    m_recorder->setNumBuffers(m_numBuffers);
+
     m_imageStreamerThread->start();
     m_imageStreamer->moveToThread(m_imageStreamerThread);
 
@@ -129,18 +132,24 @@ SjcServer::~SjcServer()
 
 bool SjcServer::openCamera()
 {
-    //return m_recorder->openCamera(m_cameraId);
+    if (!m_recorder->openCamera(m_cameraId))
+        return false;
 
-    // test
-    bool ok = m_recorder->openCamera(m_cameraId);
-    if (ok) {
-        m_recorder->setAttribute("FrameStartTriggerMode", "FixedRate");
-        m_recorder->setAttribute("FrameRate", 5);
-        m_recorder->setAttribute("ExposureValue", 30000);
-        m_recorder->setAttribute("PixelFormat", "Mono16");
-        QTimer::singleShot(0, m_recorder, SLOT(start()));
-    }
-    return ok;
+    // default attribute settings
+    m_recorder->setAttribute("FrameStartTriggerMode", "FixedRate");
+    m_recorder->setAttribute("FrameRate", 10);
+    m_recorder->setAttribute("ExposureValue", 10000);
+    m_recorder->setAttribute("PixelFormat", "Mono16");
+
+    // config file attribute settings
+    foreach (const CamAttr &attr, m_camAttrList)
+        m_recorder->setAttribute(attr.name, attr.value);
+
+    if (verbose())
+        cout << "\n" << m_recorder->cameraInfoString() << "\n" << endl;
+
+    QTimer::singleShot(0, m_recorder, SLOT(start()));
+    return true;
 }
 
 void SjcServer::connectToDcpServer()
@@ -166,7 +175,9 @@ void SjcServer::loadConfigFile()
     bool ok;
     QSettings settings(m_configFileName, QSettings::IniFormat);
 
+    // DCP Section
     settings.beginGroup("Dcp");
+
     QString serverName = settings.value("ServerName").toString();
     if (!serverName.isEmpty())
         m_serverName = serverName;
@@ -178,11 +189,28 @@ void SjcServer::loadConfigFile()
     QByteArray deviceName = settings.value("DeviceName").toByteArray();
     if (!deviceName.isEmpty())
         m_deviceName = deviceName;
+
     settings.endGroup();
 
+    // Camera Section
     settings.beginGroup("Camera");
+
     uint cameraId = settings.value("UniqueId").toUInt(&ok);
     if (ok) m_cameraId = cameraId;
+
+    int numBuffers = settings.value("NumBuffers").toInt(&ok);
+    if (ok) m_numBuffers = numBuffers;
+
+    settings.endGroup();
+
+    // CamAttr Section
+    settings.beginGroup("CamAttr");
+    m_camAttrList.clear();
+    foreach (QString key, settings.allKeys()) {
+        CamAttr attr = { key.toAscii(), settings.value(key) };
+        if (!attr.value.toString().isEmpty())
+            m_camAttrList.append(attr);
+    }
     settings.endGroup();
 }
 
@@ -221,6 +249,9 @@ void SjcServer::dcpStateChanged(Dcp::Client::State state)
         cout << "Connected to DCP server [" << m_dcp->deviceName()
              << "@" << m_dcp->serverName() << ":" << m_dcp->serverPort()
              << "]." << endl;
+        if (verbose())
+            cout << "Local IP address for DCP connection: "
+                 << m_dcp->localAddress().toString() << endl;
         break;
     case Dcp::Client::UnconnectedState:
         cout << "Disconnected from DCP server." << endl;
@@ -404,29 +435,29 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
-        // set xbinning <pixels>
+        // set binningx <pixels>
         //     returns: FIN
         //     errorcodes: 1 -> cannot set x-binning value
         //     note: this affects roi and maximagesize
-        if (identifier == "xbinning")
+        if (identifier == "binningx")
         {
             // not implemented yet
             sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
             return;
         }
 
-        // set ybinning <pixels>
+        // set binningy <pixels>
         //     returns: FIN
         //     errorcodes: 1 -> cannot set y-binning value
         //     note: this affects roi and maximagesize
-        if (identifier == "ybinning")
+        if (identifier == "binningy")
         {
             // not implemented yet
             sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
             return;
         }
 
-        // set binning <xbinning> <ybinning>
+        // set binning <xbin> <ybin>
         //     returns: FIN
         //     errcodes: 1 -> cannot set x-binning value
         //               2 -> cannot set y-binning value
@@ -464,19 +495,20 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
-        // set pvattr <name> <value>
+        // set pvattr <name> [<value>]
         //     note: for debugging only!
         if (identifier == "pvattr")
         {
-            if (m_command.numArguments() != 2) {
+            QList<QByteArray> args = m_command.arguments();
+            if (args.size() < 1 || args.size() > 2) {
                 sendMessage(msg.ackMessage(Dcp::AckParameterError));
                 return;
             }
             sendMessage(msg.ackMessage());
 
             int errcode = 0;
-            QList<QByteArray> args = m_command.arguments();
-            if (!m_recorder->setAttribute(args[0], args[1]))
+            QVariant value = (args.size() == 2 ? args[1] : QVariant());
+            if (!m_recorder->setAttribute(args[0], value))
                 errcode = 1;
             sendMessage(msg.replyMessage(QByteArray(), errcode));
             return;
@@ -588,28 +620,8 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
-        // get xbinning
-        //     returns: <pixels>
-        //     errorcodes: 1 -> cannot get x-binning value
-        if (identifier == "xbinning")
-        {
-            // not implemented yet
-            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
-            return;
-        }
-
-        // get ybinning
-        //     returns: <pixels>
-        //     errorcodes: 1 -> cannot get y-binning value
-        if (identifier == "ybinning")
-        {
-            // not implemented yet
-            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
-            return;
-        }
-
         // get binning
-        //     returns: <xbinning> <ybinning>
+        //     returns: <xbin> <ybin>
         //     errcodes: 1 -> cannot get x-binning value
         //               2 -> cannot get y-binning value
         //               3 -> cannot get any binning values
@@ -725,12 +737,12 @@ void SjcServer::recorderFrameFinished(ulong id, int status)
 
 void SjcServer::recorderStarted()
 {
-    cout << "Capture thread started." << endl;
+    cout << "Capturing started." << endl;
 }
 
 void SjcServer::recorderStopped()
 {
-    cout << "Capture thread stopped." << endl;
+    cout << "Capturing stopped." << endl;
 }
 
 void SjcServer::streamerThreadStarted()
