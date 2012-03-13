@@ -459,6 +459,8 @@ bool Camera::setAttribute(const QByteArray &name, const QVariant &value)
         }
         case ePvDatatypeBoolean:
             return setAttrBoolean(name, value.toBool());
+        case ePvDatatypeCommand:
+            return runCommand(name);
         default:
             break;
         }
