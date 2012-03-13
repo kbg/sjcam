@@ -54,7 +54,10 @@ public:
     tPvFrame * readFinishedFrame();
     void enqueueFrame(tPvFrame *frame);
 
+    int numBuffers() const;
+    bool setNumBuffers(int numBuffers);
     bool isStopRequested() const;
+    QString cameraInfoString() const;
 
 public slots:
     void start();
@@ -80,7 +83,7 @@ private:
     QQueue<tPvFrame *> m_inputQueue;
     QQueue<tPvFrame *> m_outputQueue;
     bool m_stopRequested;
-    int m_numFrames;
+    int m_numBuffers;
 };
 
 inline bool Recorder::isStopRequested() const {

@@ -33,7 +33,7 @@ Recorder::Recorder(QObject *parent)
     : QThread(parent),
       m_camera(new Camera),
       m_stopRequested(false),
-      m_numFrames(10)
+      m_numBuffers(10)
 {
 }
 
@@ -69,10 +69,10 @@ bool Recorder::openCamera(ulong cameraId)
         m_cameraMutex.unlock();
         return false;
     }
-    QString cameraInfoString = m_camera->infoString();
+    ulong camId = m_camera->cameraInfo().UniqueId;
     m_cameraMutex.unlock();
 
-    emit info("\n" + cameraInfoString + "\n");
+    emit info(QString("Camera opened [%1].").arg(camId));
 
     allocateFrames();
     return true;
@@ -119,6 +119,29 @@ bool Recorder::setAttribute(const QByteArray &name, const QVariant &value)
         return false;
     }
     return true;
+}
+
+int Recorder::numBuffers() const
+{
+    QMutexLocker locker(&m_cameraMutex);
+    return m_numBuffers;
+}
+
+bool Recorder::setNumBuffers(int numBuffers)
+{
+    QMutexLocker locker(&m_cameraMutex);
+    if (m_camera->isOpen()) {
+        emit error("Cannot set number of buffers while camera is opened.");
+        return false;
+    }
+    m_numBuffers = (numBuffers >= 1 ? numBuffers : 1);
+    return true;
+}
+
+QString Recorder::cameraInfoString() const
+{
+    QMutexLocker locker(&m_cameraMutex);
+    return m_camera->infoString();
 }
 
 bool Recorder::hasFinishedFrame() const
@@ -169,7 +192,7 @@ void Recorder::allocateFrames()
     ulong bufferSize = 2L * width * height;
 
     m_queueMutex.lock();
-    for (int i = 0; i < m_numFrames; ++i)
+    for (int i = 0; i < m_numBuffers; ++i)
         m_inputQueue.enqueue(allocPvFrame(bufferSize));
     m_queueMutex.unlock();
 }
