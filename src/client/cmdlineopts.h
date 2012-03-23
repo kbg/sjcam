@@ -24,23 +24,32 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "sjcclient.h"
-#include "cmdlineopts.h"
-#include "version.h"
-#include <QtGui/QApplication>
-#include <QtCore/QtCore>
+#ifndef SJCCLIENT_CMDLINEOPTS_H
+#define SJCCLIENT_CMDLINEOPTS_H
 
-int main(int argc, char **argv)
+#include <QtCore/QString>
+#include <QtCore/QByteArray>
+#include <QtCore/QTextStream>
+
+class CmdLineOpts
 {
-    QApplication app(argc, argv);
-    app.setApplicationName(QFileInfo(app.arguments()[0]).fileName());
+public:
+    CmdLineOpts();
+    bool parse();
+    void printHelp();
 
-    CmdLineOpts opts;
-    if (!opts.parse() || opts.help)
-        return opts.help ? 0 : 1;
+protected:
+    void printReqArg(const QString &optionName);
+    QString moreInfo();
 
-    SjcClient client(opts);
-    client.show();
+public:
+    QString serverName;
+    quint16 serverPort;
+    QByteArray deviceName;
+    QString configFileName;
+    int verbose;
+    bool version;
+    bool help;
+};
 
-    return app.exec();
-}
+#endif // SJCCLIENT_CMDLINEOPTS_H

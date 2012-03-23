@@ -4,20 +4,40 @@ include_directories(
     ${QT_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 set(sjcclient_SRCS
     sjcclient_main.cpp
+    cmdlineopts.cpp
     sjcclient.cpp
+    cameradock.cpp
+    recordingdock.cpp
+    histogramdock.cpp
 )
 qt4_automoc(${sjcclient_SRCS})
-qt4_wrap_cpp(sjcclient_MOC_SRCS sjcclient.h)
-qt4_wrap_ui(sjcclient_UI_HDRS sjcclient.ui)
+qt4_wrap_cpp(sjcclient_MOC_SRCS
+    sjcclient.h
+    cameradock.h
+    recordingdock.h
+    histogramdock.h
+)
+qt4_wrap_ui(sjcclient_UI_HDRS
+    ui/sjcclient.ui
+    ui/cameradock.ui
+    ui/recordingdock.ui
+    ui/histogramdock.ui
+)
+
+qt4_add_resources(sjcclient_RCC_SRCS ui/sjcclient.qrc)
+#set(sjcclient_WINRC ui/sjcclient.rc)
 
 add_executable(sjcclient
     ${sjcclient_SRCS}
     ${sjcclient_MOC_SRCS}
     ${sjcclient_UI_HDRS}
+    ${sjcclient_RCC_SRCS}
+    ${sjcclient_WINRC}
 )
 target_link_libraries(sjcclient
     ${QT_QTCORE_LIBRARY}

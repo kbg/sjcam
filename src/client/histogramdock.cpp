@@ -24,23 +24,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "sjcclient.h"
-#include "cmdlineopts.h"
-#include "version.h"
-#include <QtGui/QApplication>
-#include <QtCore/QtCore>
+#include "histogramdock.h"
+#include "ui_histogramdock.h"
 
-int main(int argc, char **argv)
+HistogramDock::HistogramDock(QWidget *parent)
+    : QDockWidget(parent),
+      ui(new Ui::HistogramDock)
 {
-    QApplication app(argc, argv);
-    app.setApplicationName(QFileInfo(app.arguments()[0]).fileName());
+    ui->setupUi(this);
+}
 
-    CmdLineOpts opts;
-    if (!opts.parse() || opts.help)
-        return opts.help ? 0 : 1;
-
-    SjcClient client(opts);
-    client.show();
-
-    return app.exec();
+HistogramDock::~HistogramDock()
+{
+    delete ui;
 }

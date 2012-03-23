@@ -24,23 +24,25 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "sjcclient.h"
-#include "cmdlineopts.h"
-#include "version.h"
-#include <QtGui/QApplication>
-#include <QtCore/QtCore>
+#ifndef SJCAM_HISTOGRAMDOCK_H
+#define SJCAM_HISTOGRAMDOCK_H
 
-int main(int argc, char **argv)
-{
-    QApplication app(argc, argv);
-    app.setApplicationName(QFileInfo(app.arguments()[0]).fileName());
+#include <QtGui/QDockWidget>
 
-    CmdLineOpts opts;
-    if (!opts.parse() || opts.help)
-        return opts.help ? 0 : 1;
-
-    SjcClient client(opts);
-    client.show();
-
-    return app.exec();
+namespace Ui {
+    class HistogramDock;
 }
+
+class HistogramDock : public QDockWidget
+{
+    Q_OBJECT
+
+public:
+    explicit HistogramDock(QWidget *parent = 0);
+    ~HistogramDock();
+
+private:
+    Ui::HistogramDock *ui;
+};
+
+#endif // SJCAM_HISTOGRAMDOCK_H
