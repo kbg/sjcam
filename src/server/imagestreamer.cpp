@@ -34,7 +34,6 @@ ImageStreamer::ImageStreamer(QObject *parent)
       m_tcpServer(new QTcpServer(this))
 {
     connect(m_tcpServer, SIGNAL(newConnection()), SLOT(newConnection()));
-    m_tcpServer->listen(QHostAddress::Any, 4711);
 
     m_colorTable.resize(256);
     for (int j = 0; j < 256; ++j)
@@ -45,6 +44,20 @@ ImageStreamer::ImageStreamer(QObject *parent)
 ImageStreamer::~ImageStreamer()
 {
     delete m_tcpServer;
+}
+
+bool ImageStreamer::listen(quint16 port)
+{
+    if (!m_tcpServer->listen(QHostAddress::AnyIPv6, port)) {
+        emit error("Streaming Server: " + m_tcpServer->errorString() + ".");
+        return false;
+    }
+    return true;
+}
+
+quint16 ImageStreamer::serverPort() const
+{
+    return m_tcpServer->serverPort();
 }
 
 void ImageStreamer::processFrame(tPvFrame *frame)
@@ -127,7 +140,7 @@ void ImageStreamer::newConnection()
         socket->peerPort()
     };
     m_socketMap.insert(socket, clientInfo);
-    emit info(QString("Streaming client %1:%2 connected.")
+    emit info(QString("Streaming client connected [%1:%2].")
               .arg(clientInfo.name).arg(clientInfo.port));
 }
 
@@ -145,7 +158,7 @@ void ImageStreamer::socketDisconnected()
     }
 
     ClientInfo clientInfo = m_socketMap.value(socket);
-    emit info(QString("Streaming client %1:%2 disconnected.")
+    emit info(QString("Streaming client disconnected [%1:%2].")
               .arg(clientInfo.name).arg(clientInfo.port));
 
     m_socketMap.remove(socket);

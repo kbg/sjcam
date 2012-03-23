@@ -24,11 +24,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "cmdlineoptions.h"
+#include "cmdlineopts.h"
 #include <QtCore/QCoreApplication>
 #include <QtCore/QStringList>
 
-CmdLineOptions::CmdLineOptions()
+CmdLineOpts::CmdLineOpts()
     : serverName(QString()),
       serverPort(0),
       deviceName(QByteArray()),
@@ -42,7 +42,7 @@ CmdLineOptions::CmdLineOptions()
 {
 }
 
-bool CmdLineOptions::parse()
+bool CmdLineOpts::parse()
 {
     QTextStream cout(stdout, QIODevice::WriteOnly);
 
@@ -144,7 +144,7 @@ bool CmdLineOptions::parse()
     return true;
 }
 
-void CmdLineOptions::printHelp()
+void CmdLineOpts::printHelp()
 {
     QTextStream cout(stdout, QIODevice::WriteOnly);
     cout << "Usage: " << qApp->applicationName() << " [options]\n"
@@ -162,14 +162,14 @@ void CmdLineOptions::printHelp()
          << "\n" << endl;
 }
 
-void CmdLineOptions::printReqArg(const QString &optionName)
+void CmdLineOpts::printReqArg(const QString &optionName)
 {
     QTextStream cout(stdout, QIODevice::WriteOnly);
     cout << qApp->applicationName() << ": option `" << optionName
          << "' requires an argument.\n" << moreInfo() << endl;
 }
 
-QString CmdLineOptions::moreInfo()
+QString CmdLineOpts::moreInfo()
 {
     return QString("Try `%1 --help' for more information.")
             .arg(qApp->applicationName());

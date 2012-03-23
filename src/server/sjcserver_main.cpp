@@ -25,7 +25,7 @@
  */
 
 #include "sjcserver.h"
-#include "cmdlineoptions.h"
+#include "cmdlineopts.h"
 #include "version.h"
 #include "pvutils.h"
 #include <QtCore/QtCore>
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     std::signal(SIGINT, exitHandler);
     std::signal(SIGTERM, exitHandler);
 
-    CmdLineOptions opts;
+    CmdLineOpts opts;
     if (!opts.parse() || opts.help)
         return opts.help ? 0 : 1;
 
@@ -114,6 +114,7 @@ int main(int argc, char **argv)
         return 1;
 
     QTimer::singleShot(0, &server, SLOT(connectToDcpServer()));
+    QTimer::singleShot(0, &server, SLOT(startCapturing()));
 
     return app.exec();
 }

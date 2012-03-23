@@ -24,17 +24,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SJCAM_CMDLINEOPTIONS_H
-#define SJCAM_CMDLINEOPTIONS_H
+#ifndef SJCSERVER_CMDLINEOPTS_H
+#define SJCSERVER_CMDLINEOPTS_H
 
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include <QtCore/QTextStream>
 
-class CmdLineOptions
+class CmdLineOpts
 {
 public:
-    CmdLineOptions();
+    CmdLineOpts();
     bool parse();
     void printHelp();
 
@@ -55,4 +55,4 @@ public:
     bool help;
 };
 
-#endif // SJCAM_CMDLINEOPTIONS_H
+#endif // SJCSERVER_CMDLINEOPTS_H

@@ -4,11 +4,12 @@ include_directories(
     ${QT_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 set(sjcserver_SRCS
     sjcserver_main.cpp
-    cmdlineoptions.cpp
+    cmdlineopts.cpp
     sjcserver.cpp
     pvutils.cpp
     camera.cpp

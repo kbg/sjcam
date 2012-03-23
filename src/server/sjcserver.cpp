@@ -33,7 +33,7 @@
 #include <QtCore/QtCore>
 #include <QtNetwork/QHostAddress>
 
-SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
+SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
     : QObject(parent),
       cout(stdout, QIODevice::WriteOnly),
       m_recorder(new Recorder),
@@ -42,11 +42,14 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
       m_imageWriter(new ImageWriter),
       m_imageWriterThread(new QThread),
       m_dcp(new Dcp::Client),
+      m_clientTimeout(30000),
+      m_updateClientMapTimer(new QTimer),
       m_serverName("localhost"),
       m_serverPort(2001),
       m_deviceName("sjcam"),
       m_cameraId(0),
       m_numBuffers(10),
+      m_streamingPort(0),
       m_configFileName(opts.configFileName),
       m_verbose(false)
 {
@@ -85,6 +88,9 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
     connect(m_imageStreamer, SIGNAL(frameFinished(tPvFrame*)),
             m_imageWriter, SLOT(processFrame(tPvFrame*)));
 
+    connect(m_updateClientMapTimer, SIGNAL(timeout()), SLOT(updateClientMap()));
+    m_updateClientMapTimer->start(m_clientTimeout / 3);
+
     if (!m_configFileName.isEmpty())
         loadConfigFile();
     if (!opts.serverName.isEmpty())
@@ -100,8 +106,11 @@ SjcServer::SjcServer(const CmdLineOptions &opts, QObject *parent)
 
     m_recorder->setNumBuffers(m_numBuffers);
 
-    m_imageStreamerThread->start();
-    m_imageStreamer->moveToThread(m_imageStreamerThread);
+    if (m_imageStreamer->listen(m_streamingPort)) {
+        m_imageStreamerThread->start();
+        m_imageStreamer->moveToThread(m_imageStreamerThread);
+    }
+    m_streamingPort = m_imageStreamer->serverPort();
 
     m_imageWriterThread->start();
     m_imageWriter->moveToThread(m_imageWriterThread);
@@ -126,6 +135,9 @@ SjcServer::~SjcServer()
     delete m_recorder;
     delete m_imageStreamer;
     delete m_imageStreamerThread;
+    delete m_imageWriter;
+    delete m_imageWriterThread;
+    delete m_updateClientMapTimer;
 
     PvUnInitialize();
 }
@@ -142,14 +154,33 @@ bool SjcServer::openCamera()
     m_recorder->setAttribute("PixelFormat", "Mono16");
 
     // config file attribute settings
-    foreach (const CamAttr &attr, m_camAttrList)
+    foreach (const NamedValue &attr, m_camAttrList)
         m_recorder->setAttribute(attr.name, attr.value);
 
     if (verbose())
         cout << "\n" << m_recorder->cameraInfoString() << "\n" << endl;
 
-    QTimer::singleShot(0, m_recorder, SLOT(start()));
     return true;
+}
+
+bool SjcServer::closeCamera()
+{
+    stopCapturing();
+    return m_recorder->closeCamera();
+}
+
+void SjcServer::startCapturing()
+{
+    if (!m_recorder->isRunning())
+        m_recorder->start();
+}
+
+void SjcServer::stopCapturing()
+{
+    if (m_recorder->isRunning()) {
+        m_recorder->stop();
+        m_recorder->wait();
+    }
 }
 
 void SjcServer::connectToDcpServer()
@@ -207,10 +238,17 @@ void SjcServer::loadConfigFile()
     settings.beginGroup("CamAttr");
     m_camAttrList.clear();
     foreach (QString key, settings.allKeys()) {
-        CamAttr attr = { key.toAscii(), settings.value(key) };
+        NamedValue attr(key.toAscii(), settings.value(key));
         if (!attr.value.toString().isEmpty())
             m_camAttrList.append(attr);
     }
+    settings.endGroup();
+
+    // Streaming Section
+    settings.beginGroup("Streaming");
+    uint streamingPort = settings.value("ServerPort").toUInt(&ok);
+    if (ok && streamingPort <= 65535)
+        m_streamingPort = quint16(streamingPort);
     settings.endGroup();
 }
 
@@ -219,6 +257,49 @@ void SjcServer::sendMessage(const Dcp::Message &message)
     if (verbose())
         cout << message << endl;
     m_dcp->sendMessage(message);
+}
+
+void SjcServer::sendNotification(const QByteArray &data)
+{
+    foreach (const QByteArray &deviceName, m_clientMap.keys()) {
+        if (verbose())
+            cout << m_dcp->sendMessage(deviceName, data) << endl;
+        else
+            m_dcp->sendMessage(deviceName, data);
+    }
+}
+
+void SjcServer::addClient(const QByteArray &deviceName)
+{
+    if (!m_clientMap.contains(deviceName)) {
+        QElapsedTimer timer;
+        timer.start();
+        m_clientMap[deviceName] = timer;
+        cout << "Added client '" << deviceName
+             << "' to the notification list." << endl;
+    }
+}
+
+void SjcServer::removeClient(const QByteArray &deviceName)
+{
+    if (m_clientMap.contains(deviceName)) {
+        m_clientMap.remove(deviceName);
+        cout << "Removed client '" << deviceName
+             << "' from the notification list." << endl;
+    }
+}
+
+void SjcServer::updateClientMap()
+{
+    QMutableMapIterator<QByteArray, QElapsedTimer> iter(m_clientMap);
+    while (iter.hasNext()) {
+        iter.next();
+        if (iter.value().hasExpired(m_clientTimeout)) {
+            cout << "Removed client '" << iter.key()
+                 << "' from the notification list (timeout)." << endl;
+            iter.remove();
+        }
+    }
 }
 
 void SjcServer::printInfo(const QString &infoString)
@@ -277,8 +358,12 @@ void SjcServer::dcpMessageReceived()
         return;
     }
 
-    Dcp::CommandParser::CmdType cmdType = m_command.cmdType();
-    QByteArray identifier = m_command.identifier();
+    // update client map if the sender requested notifications
+    if (m_clientMap.contains(msg.source()))
+        m_clientMap[msg.source()].restart();
+
+    const Dcp::CommandParser::CmdType cmdType = m_command.cmdType();
+    const QByteArray identifier = m_command.identifier();
     if (cmdType == Dcp::CommandParser::SetCmd)
     {
         // set nop
@@ -291,6 +376,33 @@ void SjcServer::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
             sendMessage(msg.replyMessage());
+            return;
+        }
+
+        // set notify ( true | false )
+        //     returns: FIN
+        if (identifier == "notify")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            QByteArray arg = m_command.arguments()[0];
+            if (arg == "true") {
+                sendMessage(msg.ackMessage());
+                addClient(msg.source());
+                sendMessage(msg.replyMessage());
+            }
+            else if (arg == "false") {
+                sendMessage(msg.ackMessage());
+                removeClient(msg.source());
+                sendMessage(msg.replyMessage());
+            }
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
             return;
         }
 
@@ -320,20 +432,32 @@ void SjcServer::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
 
-            int errcode = 0;
-            if (open)
-                errcode = m_recorder->openCamera(m_cameraId) ? 0 : 1;
-            else if (m_recorder->isCameraOpen()) {
-                if (m_recorder->isRunning()) {
-                    m_recorder->stop();
-                    m_recorder->wait();
+            bool ok = open ? openCamera() : closeCamera();
+            sendMessage(msg.replyMessage(QByteArray(), ok ? 0 : 1));
+
+            // send notifications
+            if (!m_clientMap.isEmpty())
+            {
+                QByteArray arg;
+                if (m_recorder->isCameraOpen())
+                    arg = m_recorder->isRunning() ? "capturing" : "opened";
+                else
+                    arg = "closed";
+                sendNotification("set camerastate " + arg);
+
+                bool ok;
+                QVariant value;
+                if (m_recorder->getAttribute("ExposureValue", &value)) {
+                    arg = QByteArray::number(value.toUInt(&ok));
+                    if (ok) sendNotification("set exposure " + arg);
                 }
-                errcode = m_recorder->closeCamera() ? 0 : 1;
+                if (m_recorder->getAttribute("FrameRate", &value)) {
+                    arg = QByteArray::number(value.toFloat(&ok), 'f', 3);
+                    if (ok) sendNotification("set framerate " + arg);
+                }
             }
-            sendMessage(msg.replyMessage(QByteArray(), errcode));
             return;
         }
-
 
         // set capturing ( start | stop )
         //     errcodes: 1 -> cannot start/stop capturing
@@ -372,6 +496,9 @@ void SjcServer::dcpMessageReceived()
             // Note: errorcode 1 cannot be returned without waiting for the
             // Recorder::started() signal; for now we always return errcode 0.
             sendMessage(msg.replyMessage());
+
+            // Notification messages will be sent from the recorderStarted()
+            // and recorderStopped() slots
             return;
         }
 
@@ -393,10 +520,17 @@ void SjcServer::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
 
-            int errcode = 0;
-            if (!m_recorder->setAttribute("ExposureValue", value))
-                errcode = 1;
-            sendMessage(msg.replyMessage(QByteArray(), errcode));
+            if (m_recorder->setAttribute("ExposureValue", value))
+                sendMessage(msg.replyMessage());
+            else {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                QVariant cameraValue;
+                m_recorder->getAttribute("ExposureValue", &cameraValue);
+                value = cameraValue.toUInt(&ok);
+                if (!ok)
+                    return; // don't send notification if value isn't valid
+            }
+            sendNotification("set exposure " + QByteArray::number(value));
             return;
         }
 
@@ -418,10 +552,18 @@ void SjcServer::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
 
-            int errcode = 0;
-            if (!m_recorder->setAttribute("FrameRate", value))
-                errcode = 1;
-            sendMessage(msg.replyMessage(QByteArray(), errcode));
+            if (m_recorder->setAttribute("FrameRate", value))
+                sendMessage(msg.replyMessage());
+            else {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                QVariant cameraValue;
+                m_recorder->getAttribute("FrameRate", &cameraValue);
+                value = cameraValue.toFloat(&ok);
+                if (!ok)
+                    return; // don't send notification if value isn't valid
+            }
+            sendNotification("set framerate " + QByteArray::number(
+                                 value, 'f', 3));
             return;
         }
 
@@ -516,6 +658,23 @@ void SjcServer::dcpMessageReceived()
     }
     else if (cmdType == Dcp::CommandParser::GetCmd)
     {
+        // get notify
+        //     returns: ( true | false )
+        if (identifier == "notify")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            if (m_clientMap.contains(msg.source()))
+                sendMessage(msg.replyMessage("true"));
+            else
+                sendMessage(msg.replyMessage("false"));
+            return;
+        }
+
         // get camerastate
         //     returns: ( closed | opened | capturing )
         if (identifier == "camerastate")
@@ -540,7 +699,6 @@ void SjcServer::dcpMessageReceived()
         //     errorcodes: 1 -> cannot get exposure value
         if (identifier == "exposure")
         {
-            // not implemented yet
             if (m_command.hasArguments()) {
                 sendMessage(msg.ackMessage(Dcp::AckParameterError));
                 return;
@@ -633,11 +791,17 @@ void SjcServer::dcpMessageReceived()
         }
 
         // get streaminghost
-        //     returns: <IP address> <port>
+        //     returns: <address> <port>
         if (identifier == "streaminghost")
         {
-            // not implemented yet
-            sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            QByteArray address = m_dcp->localAddress().toString().toAscii();
+            QByteArray port = QByteArray::number(m_streamingPort);
+            sendMessage(msg.replyMessage(address + " " + port));
             return;
         }
 
@@ -738,17 +902,21 @@ void SjcServer::recorderFrameFinished(ulong id, int status)
 void SjcServer::recorderStarted()
 {
     cout << "Capturing started." << endl;
+    sendNotification("set camerastate capturing");
 }
 
 void SjcServer::recorderStopped()
 {
     cout << "Capturing stopped." << endl;
+    QByteArray state = (m_recorder->isCameraOpen()) ? "opened" : "closed";
+    sendNotification("set camerastate " + state);
 }
 
 void SjcServer::streamerThreadStarted()
 {
     if (verbose())
-        cout << "Streaming server started." << endl;
+        cout << "Streaming server started [" << m_streamingPort << "]."
+             << endl;
 }
 
 void SjcServer::streamerThreadFinished()

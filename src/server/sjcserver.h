@@ -27,7 +27,8 @@
 #ifndef SJCAM_SJCSERVER_H
 #define SJCAM_SJCSERVER_H
 
-#include "cmdlineoptions.h"
+#include "cmdlineopts.h"
+#include <sjcdata.h>
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -35,36 +36,42 @@
 #include <QtCore/QTextStream>
 #include <QtCore/QVariant>
 #include <QtCore/QList>
+#include <QtCore/QMap>
+#include <QtCore/QElapsedTimer>
 #include <PvApi.h>
 
 class Recorder;
 class ImageStreamer;
 class ImageWriter;
 class QThread;
-
-struct CamAttr {
-    QByteArray name;
-    QVariant value;
-};
+class QTimer;
 
 class SjcServer : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit SjcServer(const CmdLineOptions &opts, QObject *parent = 0);
+    explicit SjcServer(const CmdLineOpts &opts, QObject *parent = 0);
     ~SjcServer();
 
 public slots:
     bool openCamera();
+    bool closeCamera();
+    void startCapturing();
+    void stopCapturing();
     void connectToDcpServer();
 
 protected:
     void loadConfigFile();
     bool verbose() { return m_verbose; }
     void sendMessage(const Dcp::Message &message);
+    void sendNotification(const QByteArray &data);
+    void addClient(const QByteArray &deviceName);
+    void removeClient(const QByteArray &deviceName);
 
 protected slots:
+    void updateClientMap();
+
     void printInfo(const QString &infoString);
     void printError(const QString &errorString);
 
@@ -93,13 +100,17 @@ private:
     QThread * const m_imageWriterThread;
     Dcp::Client * const m_dcp;
     Dcp::CommandParser m_command;
+    QMap<QByteArray, QElapsedTimer> m_clientMap;
+    int m_clientTimeout;
+    QTimer *m_updateClientMapTimer;
     QString m_serverName;
     quint16 m_serverPort;
     QByteArray m_deviceName;
     ulong m_cameraId;
     int m_numBuffers;
+    quint16 m_streamingPort;
     QString m_configFileName;
-    QList<CamAttr> m_camAttrList;
+    QList<NamedValue> m_camAttrList;
     bool m_verbose;
 };
 

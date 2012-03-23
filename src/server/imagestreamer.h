@@ -46,6 +46,10 @@ public:
     explicit ImageStreamer(QObject *parent = 0);
     ~ImageStreamer();
 
+    // these methods are NOT thread-safe!
+    bool listen(quint16 port);
+    quint16 serverPort() const;
+
 public slots:
     void processFrame(tPvFrame *frame);
 
