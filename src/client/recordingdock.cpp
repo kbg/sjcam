@@ -12,3 +12,39 @@ RecordingDock::~RecordingDock()
 {
     delete ui;
 }
+
+int RecordingDock::count() const
+{
+    return ui->spinCount->value();
+}
+
+void RecordingDock::setCount(int count)
+{
+    ui->spinCount->setValue(count);
+}
+
+int RecordingDock::stepping() const
+{
+    return ui->spinStepping->value();
+}
+
+void RecordingDock::setStepping(int stepping)
+{
+    ui->spinCount->setValue(stepping);
+}
+
+void RecordingDock::setFramesWritten(int n, int total)
+{
+    ui->labelFilesWritten->setText(
+            tr("Wrote %1 of %2 file(s)").arg(n).arg(total));
+}
+
+void RecordingDock::on_buttonSave_clicked()
+{
+    emit writeFrames(count(), stepping());
+}
+
+void RecordingDock::on_buttonStop_clicked()
+{
+    emit writeFrames(0, 1);
+}

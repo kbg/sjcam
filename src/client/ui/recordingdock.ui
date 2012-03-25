@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>198</width>
+    <width>224</width>
     <height>312</height>
    </rect>
   </property>
@@ -22,8 +22,14 @@
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="1">
-     <widget class="QSpinBox" name="spinBox">
+     <widget class="QSpinBox" name="spinCount">
       <property name="minimum">
+       <number>0</number>
+      </property>
+      <property name="maximum">
+       <number>1000</number>
+      </property>
+      <property name="value">
        <number>1</number>
       </property>
      </widget>
@@ -49,16 +55,15 @@
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QSpinBox" name="spinBox_2">
-      <property name="value">
+     <widget class="QSpinBox" name="spinStepping">
+      <property name="minimum">
        <number>1</number>
       </property>
-     </widget>
-    </item>
-    <item row="2" column="0" colspan="2">
-     <widget class="QPushButton" name="pushButton">
-      <property name="text">
-       <string>Write images to file</string>
+      <property name="maximum">
+       <number>1000</number>
+      </property>
+      <property name="value">
+       <number>1</number>
       </property>
      </widget>
     </item>
@@ -79,7 +84,7 @@
      </spacer>
     </item>
     <item row="3" column="0" colspan="2">
-     <widget class="QLabel" name="label_3">
+     <widget class="QLabel" name="labelFilesWritten">
       <property name="text">
        <string>Wrote 0 of 0 file(s)</string>
       </property>
@@ -88,13 +93,27 @@
       </property>
      </widget>
     </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="buttonSave">
+      <property name="text">
+       <string>Write frames</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="buttonStop">
+      <property name="text">
+       <string>Stop</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
  </widget>
  <tabstops>
-  <tabstop>spinBox</tabstop>
-  <tabstop>spinBox_2</tabstop>
-  <tabstop>pushButton</tabstop>
+  <tabstop>spinCount</tabstop>
+  <tabstop>spinStepping</tabstop>
+  <tabstop>buttonSave</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -15,6 +15,21 @@ public:
     explicit RecordingDock(QWidget *parent = 0);
     ~RecordingDock();
 
+    int count() const;
+    void setCount(int count);
+
+    int stepping() const;
+    void setStepping(int stepping);
+
+    void setFramesWritten(int n, int total);
+
+signals:
+    void writeFrames(int count, int stepping);
+
+private slots:
+    void on_buttonSave_clicked();
+    void on_buttonStop_clicked();
+
 private:
     Ui::RecordingDock *ui;
 };

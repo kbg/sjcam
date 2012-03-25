@@ -80,6 +80,8 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     connect(m_cameraDock, SIGNAL(exposureTimeChanged(double)), SLOT(exposureChanged(double)));
     connect(m_cameraDock, SIGNAL(frameRateChanged(double)), SLOT(frameRateChanged(double)));
 
+    connect(m_recordingDock, SIGNAL(writeFrames(int,int)), SLOT(writeFrames(int,int)));
+
     m_configFileName = opts.configFileName;
     loadSettings();
 
@@ -113,6 +115,8 @@ void SjcClient::connectToServer()
 
 void SjcClient::disconnectFromServer()
 {
+    sendMessage("set notify false");
+    m_dcp->waitForMessagesWritten(1000);
     m_dcp->disconnectFromServer();
 }
 
@@ -177,6 +181,7 @@ void SjcClient::saveSettings()
 void SjcClient::closeEvent(QCloseEvent *event)
 {
     saveSettings();
+    disconnectFromServer();
     QMainWindow::closeEvent(event);
 }
 
@@ -435,6 +440,34 @@ void SjcClient::dcpMessageReceived()
             }
             return;
         }
+
+        // set framewritten <number> <total>
+        //     returns: FIN
+        if (identifier == "framewritten")
+        {
+            if (m_command.numArguments() != 2) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool ok1, ok2;
+            QList<QByteArray> args = m_command.arguments();
+            int n = args[0].toInt(&ok1);
+            int total = args[1].toInt(&ok2);
+
+            if (ok1 && ok2) {
+                sendMessage(msg.ackMessage());
+
+                m_recordingDock->setFramesWritten(n, total);
+
+                // xx
+
+                sendMessage(msg.replyMessage());
+            } else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+            }
+            return;
+        }
     }
     else if (cmdType == Dcp::CommandParser::GetCmd)
     {
@@ -477,6 +510,15 @@ void SjcClient::exposureChanged(double ms)
 void SjcClient::frameRateChanged(double hz)
 {
     sendMessage("set framerate " + QByteArray::number(hz, 'f', 3));
+}
+
+void SjcClient::writeFrames(int count, int stepping)
+{
+    if (count != 0)
+        sendMessage("set writeframes " + QByteArray::number(count) + " " +
+                    QByteArray::number(stepping));
+    else
+        sendMessage("set writeframes 0");
 }
 
 void SjcClient::socketError(QAbstractSocket::SocketError error)

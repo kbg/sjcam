@@ -85,6 +85,8 @@ protected slots:
     void exposureChanged(double ms);
     void frameRateChanged(double hz);
 
+    void writeFrames(int count, int stepping);
+
     void socketError(QAbstractSocket::SocketError error);
     void socketStateChanged(QAbstractSocket::SocketState state);
     void socketConnected();
