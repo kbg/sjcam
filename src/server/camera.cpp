@@ -140,6 +140,12 @@ bool Camera::resetConfig()
         return false;
     }
 
+    err = PvAttrBooleanSet(m_device, "ChunkModeActive", 1);
+    if (err != ePvErrSuccess) {
+        setError("Cannot enable chunk mode.", err);
+        return false;
+    }
+
     return true;
 }
 

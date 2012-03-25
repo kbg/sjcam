@@ -191,6 +191,8 @@ tPvFrame * allocPvFrame(ulong bufferSize)
     qMemSet(frame, 0, sizeof(tPvFrame));
     frame->ImageBuffer = new uchar[bufferSize];
     frame->ImageBufferSize = bufferSize;
+    frame->AncillaryBuffer = new uchar[48]; // Needs firmware 1.42; the buffer
+    frame->AncillaryBufferSize = 48;        // size is 48 bytes (PvApi 1.26)
     return frame;
 }
 
@@ -198,6 +200,7 @@ void freePvFrame(tPvFrame *frame)
 {
     if (frame) {
         delete [] reinterpret_cast<uchar *>(frame->ImageBuffer);
+        delete [] reinterpret_cast<uchar *>(frame->AncillaryBuffer);
         delete frame;
     }
 }
