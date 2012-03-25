@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/camera-sj.svg</file>
+        <file>icons/view-refresh.svg</file>
     </qresource>
 </RCC>

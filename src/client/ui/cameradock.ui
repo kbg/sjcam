@@ -176,7 +176,7 @@
          <number>3</number>
         </property>
         <property name="maximum">
-         <double>1000.000000000000000</double>
+         <double>100000.000000000000000</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
@@ -186,7 +186,14 @@
       <item>
        <widget class="QToolButton" name="buttonExposure">
         <property name="text">
-         <string>ok</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="sjcclient.qrc">
+          <normaloff>:/icons/view-refresh.svg</normaloff>:/icons/view-refresh.svg</iconset>
+        </property>
+        <property name="autoRaise">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -217,7 +224,14 @@
       <item>
        <widget class="QToolButton" name="buttonFrameRate">
         <property name="text">
-         <string>ok</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="sjcclient.qrc">
+          <normaloff>:/icons/view-refresh.svg</normaloff>:/icons/view-refresh.svg</iconset>
+        </property>
+        <property name="autoRaise">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -247,6 +261,8 @@
   <tabstop>spinFrameRate</tabstop>
   <tabstop>buttonFrameRate</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="sjcclient.qrc"/>
+ </resources>
  <connections/>
 </ui>

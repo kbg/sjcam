@@ -38,6 +38,7 @@ CameraDock::CameraDock(QWidget *parent)
     connect(ui->buttonOpen, SIGNAL(clicked(bool)), SIGNAL(openButtonClicked(bool)));
     connect(ui->buttonCapture, SIGNAL(clicked(bool)), SIGNAL(captureButtonClicked(bool)));
     //reset();
+    setCameraState(UnknownState);
 }
 
 CameraDock::~CameraDock()
@@ -47,7 +48,6 @@ CameraDock::~CameraDock()
 
 void CameraDock::reset()
 {
-    setCameraState(UnknownState);
     setExposureTime(1);
     setFrameRate(1);
     ui->labelCamera->setText("-");
@@ -65,18 +65,30 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
     case UnknownState:
         ui->buttonOpen->setChecked(false);
         ui->buttonCapture->setChecked(false);
-        //ui->buttonCapture->setDisabled(true);
-        reset();
+        ui->buttonCapture->setEnabled(false);
+        ui->spinExposure->setEnabled(false);
+        ui->spinFrameRate->setEnabled(false);
+        ui->buttonExposure->setEnabled(false);
+        ui->buttonFrameRate->setEnabled(false);
+        //reset();
         break;
     case OpenedState:
         ui->buttonOpen->setChecked(true);
         ui->buttonCapture->setChecked(false);
-        //ui->buttonCapture->setEnabled(true);
+        ui->buttonCapture->setEnabled(true);
+        ui->spinExposure->setEnabled(true);
+        ui->spinFrameRate->setEnabled(true);
+        ui->buttonExposure->setEnabled(true);
+        ui->buttonFrameRate->setEnabled(true);
         break;
     case CapturingState:
         ui->buttonOpen->setChecked(true);
         ui->buttonCapture->setChecked(true);
-        //ui->buttonCapture->setEnabled(true);
+        ui->buttonCapture->setEnabled(true);
+        ui->spinExposure->setEnabled(true);
+        ui->spinFrameRate->setEnabled(true);
+        ui->buttonExposure->setEnabled(true);
+        ui->buttonFrameRate->setEnabled(true);
         break;
     }
 }
