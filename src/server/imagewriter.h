@@ -28,9 +28,9 @@
 #define SJCAM_IMAGEWRITER_H
 
 #include <QtCore/QObject>
+#include <QtCore/QDir>
+#include <QtCore/QString>
 #include <PvApi.h>
-
-class QString;
 
 class ImageWriter : public QObject
 {
@@ -40,16 +40,32 @@ public:
     explicit ImageWriter(QObject *parent = 0);
     ~ImageWriter();
 
+    // these methods are NOT thread-safe!
+    void setDirectory(const QString &directory);
+    void setFileNamePrefix(const QString &prefix);
+
 public slots:
     void processFrame(tPvFrame *frame);
+    void writeNextFrames(int count, int stepping);
 
 signals:
     void frameFinished(tPvFrame *frame);
+    void frameWritten(int n, int total);
     void info(const QString &infoString) const;
     void error(const QString &errorString) const;
 
+protected:
+    bool writeFrame(tPvFrame *frame);
+    QString fitsioErrorString(int errcode) const;
+    void sendError(const QString &msg, int errcode = 0) const;
+
 private:
     Q_DISABLE_COPY(ImageWriter)
+    QDir m_directory;
+    QString m_fileNamePrefix;
+    int m_count;
+    int m_stepping;
+    int m_i;
 };
 
 #endif // SJCAM_IMAGEWRITER_H

@@ -76,6 +76,8 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
     connect(m_imageStreamerThread, SIGNAL(finished()),
                                    SLOT(streamerThreadFinished()));
 
+    connect(m_imageWriter, SIGNAL(frameWritten(int,int)),
+                           SLOT(writerFrameWritten(int,int)));
     connect(m_imageWriter, SIGNAL(frameFinished(tPvFrame*)),
                            SLOT(writerFrameFinished(tPvFrame*)));
     connect(m_imageWriter, SIGNAL(info(QString)), SLOT(printInfo(QString)));
@@ -112,6 +114,7 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
     }
     m_streamingPort = m_imageStreamer->serverPort();
 
+    m_imageWriter->setFileNamePrefix(m_deviceName);
     m_imageWriterThread->start();
     m_imageWriter->moveToThread(m_imageWriterThread);
 }
@@ -611,6 +614,39 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // set writeframes <count> [<stepping>]
+        //     returns: FIN
+        if (identifier == "writeframes")
+        {
+            QList<QByteArray> args = m_command.arguments();
+            if (args.size() < 1 || args.size() > 2) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool ok;
+            int count = args[0].toInt(&ok);
+            if (!ok || count < 0) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            int stepping = 1;
+            if (args.size() == 2) {
+                stepping = args[1].toInt(&ok);
+                if (!ok || stepping < 1) {
+                    sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                    return;
+                }
+            }
+
+            sendMessage(msg.ackMessage());
+            QMetaObject::invokeMethod(m_imageWriter, "writeNextFrames",
+                    Q_ARG(int, count), Q_ARG(int, stepping));
+            sendMessage(msg.replyMessage());
+            return;
+        }
+
         // set verbose ( true | false )
         //     note: for debugging
         if (identifier == "verbose")
@@ -923,6 +959,12 @@ void SjcServer::streamerThreadFinished()
 {
     if (verbose())
         cout << "Streaming server stopped." << endl;
+}
+
+void SjcServer::writerFrameWritten(int n, int total)
+{
+    sendNotification("set framewritten " + QByteArray::number(n) + " " +
+                     QByteArray::number(total));
 }
 
 void SjcServer::writerFrameFinished(tPvFrame *frame)
