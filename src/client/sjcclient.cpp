@@ -142,6 +142,9 @@ void SjcClient::loadSettings()
         QString code = QDateTime::currentDateTimeUtc().toString("hhmmss");
         m_deviceName = "sjcclient" + code.toAscii();
     }
+    QByteArray sjcamName = settings->value("SjcamName").toByteArray();
+    if (!sjcamName.isEmpty())
+        m_sjcamName = sjcamName;
     settings->endGroup();
 
     // Streaming Settings
