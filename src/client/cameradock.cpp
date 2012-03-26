@@ -37,7 +37,6 @@ CameraDock::CameraDock(QWidget *parent)
     ui->setupUi(this);
     connect(ui->buttonOpen, SIGNAL(clicked(bool)), SIGNAL(openButtonClicked(bool)));
     connect(ui->buttonCapture, SIGNAL(clicked(bool)), SIGNAL(captureButtonClicked(bool)));
-    //reset();
     setCameraState(UnknownState);
 }
 
@@ -70,7 +69,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
         ui->spinFrameRate->setEnabled(false);
         ui->buttonExposure->setEnabled(false);
         ui->buttonFrameRate->setEnabled(false);
-        //reset();
+        reset();
         break;
     case OpenedState:
         ui->buttonOpen->setChecked(true);
@@ -113,6 +112,21 @@ void CameraDock::setFrameRate(double frameRate)
 {
     m_frameRate = frameRate;
     ui->spinFrameRate->setValue(frameRate);
+}
+
+void CameraDock::setCameraName(const QString &cameraName)
+{
+    ui->labelCamera->setText(cameraName);
+}
+
+void CameraDock::setCameraId(const QString &cameraId)
+{
+    ui->labelCameraId->setText(cameraId);
+}
+
+void CameraDock::setCameraSensor(const QString &cameraSensor)
+{
+    ui->labelSensor->setText(cameraSensor);
 }
 
 void CameraDock::on_buttonOpen_clicked(bool checked)

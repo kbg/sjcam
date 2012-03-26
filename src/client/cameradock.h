@@ -59,6 +59,10 @@ public:
     double frameRate() const;
     void setFrameRate(double frameRate);
 
+    void setCameraName(const QString &cameraName);
+    void setCameraId(const QString &cameraId);
+    void setCameraSensor(const QString &cameraSensor);
+
 signals:
     void openButtonClicked(bool checked);
     void captureButtonClicked(bool checked);

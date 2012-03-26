@@ -45,8 +45,8 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
       m_recordingDock(new RecordingDock),
       m_histogramDock(new HistogramDock),
       m_sjcamAlive(false),
-      m_timer(new QTimer),
-      m_requestTimeout(5000),
+      m_requestTimer(new QTimer),
+      m_requestTimeout(10000),
       m_serverPort(0),
       m_sjcamName("sjcam"),
       m_streamingServerPort(0),
@@ -81,6 +81,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     connect(m_cameraDock, SIGNAL(frameRateChanged(double)), SLOT(frameRateChanged(double)));
 
     connect(m_recordingDock, SIGNAL(writeFrames(int,int)), SLOT(writeFrames(int,int)));
+    connect(m_requestTimer, SIGNAL(timeout()), SLOT(requestTimer_timeout()));
 
     m_configFileName = opts.configFileName;
     loadSettings();
@@ -99,7 +100,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
 
 SjcClient::~SjcClient()
 {
-    delete m_timer;
+    delete m_requestTimer;
     delete m_dcp;
     delete m_socket;
     delete m_cameraDock;
@@ -246,16 +247,15 @@ void SjcClient::dcpConnected()
 
     // ask for camera state, streaming server address and enable notifications
     sendRequest("camerastate");
-    sendRequest("exposure");
-    sendRequest("framerate");
     sendRequest("streaminghost");
     sendMessage("set notify true");
+    m_requestTimer->start(m_requestTimeout);
 }
 
 void SjcClient::dcpDisconnected()
 {
     ui->actionConnect->setChecked(false);
-
+    m_requestTimer->stop();
     m_requestMap.clear();
     m_sjcamAlive = false;
 }
@@ -292,10 +292,8 @@ void SjcClient::dcpMessageReceived()
             if (args[0] != "false")
                 return;
             sendMessage("set notify true");
-            sendRequest("get streaminghost");
-            sendRequest("get camerastate");
-            sendRequest("get exposure");
-            sendRequest("get framerate");
+            sendRequest("camerastate");
+            sendRequest("streaminghost");
         }
         else if (identifier == "camerastate")
         {
@@ -308,7 +306,27 @@ void SjcClient::dcpMessageReceived()
                 state = CameraDock::CapturingState;
             else
                 state = CameraDock::UnknownState;
+
+            if (state == CameraDock::OpenedState ||
+                    state == CameraDock::CapturingState) {
+                sendRequest("camerainfo");
+                sendRequest("exposure");
+                sendRequest("framerate");
+            }
+            else
+                setWindowTitle(tr("Slit Jaw Camera"));
+
             m_cameraDock->setCameraState(state);
+        }
+        else if (identifier == "camerainfo")
+        {
+            if (args.size() != 5)
+                return;
+            m_cameraDock->setCameraName(args[0]);
+            m_cameraDock->setCameraId(args[1]);
+            m_cameraDock->setCameraSensor(args[2] + "x" + args[3] + "@" +
+                                          args[4]);
+            setWindowTitle(args[0] + tr(" - Slit Jaw Camera"));
         }
         else if (identifier == "exposure")
         {
@@ -394,6 +412,15 @@ void SjcClient::dcpMessageReceived()
             sendMessage(msg.ackMessage());
             m_cameraDock->setCameraState(state);
             sendMessage(msg.replyMessage());
+            if (state == CameraDock::OpenedState ||
+                    state == CameraDock::CapturingState) {
+                sendRequest("camerainfo");
+                sendRequest("exposure");
+                sendRequest("framerate");
+            }
+            else
+                setWindowTitle(tr("Slit Jaw Camera"));
+
             return;
         }
 
@@ -580,6 +607,17 @@ void SjcClient::socketReadyRead()
     ui->labelImage->setPixmap(QPixmap::fromImage(image));
 
     m_socket->write("gimmimore");
+}
+
+void SjcClient::requestTimer_timeout()
+{
+    sendRequest("notify");
+    QMutableMapIterator<quint32, RequestItem> iter(m_requestMap);
+    while (iter.hasNext()) {
+        iter.next();
+        if (iter.value().timer.hasExpired(m_requestTimeout))
+            iter.remove();
+    }
 }
 
 void SjcClient::on_actionConnect_triggered(bool checked)

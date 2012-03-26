@@ -94,6 +94,7 @@ protected slots:
     void socketReadyRead();
 
 private slots:
+    void requestTimer_timeout();
     void on_actionConnect_triggered(bool checked);
     void on_actionAbout_triggered();
 
@@ -108,7 +109,7 @@ private:
     RecordingDock *m_recordingDock;
     HistogramDock *m_histogramDock;
     bool m_sjcamAlive;
-    QTimer *m_timer;
+    QTimer *m_requestTimer;
     int m_requestTimeout;
     QMap<quint32, RequestItem> m_requestMap;
     QString m_serverName;
