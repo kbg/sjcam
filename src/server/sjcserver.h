@@ -107,6 +107,9 @@ private:
     QString m_serverName;
     quint16 m_serverPort;
     QByteArray m_deviceName;
+    QString m_outputFileNamePrefix;
+    QString m_outputDirectory;
+    QByteArray m_telescopeName;
     ulong m_cameraId;
     int m_numBuffers;
     quint16 m_streamingPort;

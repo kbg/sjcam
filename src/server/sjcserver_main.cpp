@@ -28,6 +28,7 @@
 #include "cmdlineopts.h"
 #include "version.h"
 #include "pvutils.h"
+#include "recorder.h"
 #include <QtCore/QtCore>
 #include <csignal>
 
@@ -43,6 +44,7 @@ int main(int argc, char **argv)
 
     // register types which are used as slot arguments
     qRegisterMetaType<tPvFrame *>("tPvFrame *");
+    qRegisterMetaType<CameraInfo>("CameraInfo");
 
     // use custom signal handler for SIGINT and SIGTERM to perform a clean
     // shutdown on CTRL+C or 'kill -15'

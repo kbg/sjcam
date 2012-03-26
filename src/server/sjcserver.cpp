@@ -114,7 +114,10 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
     }
     m_streamingPort = m_imageStreamer->serverPort();
 
-    m_imageWriter->setFileNamePrefix(m_deviceName);
+    m_imageWriter->setFileNamePrefix(m_outputFileNamePrefix);
+    m_imageWriter->setDirectory(m_outputDirectory);
+    m_imageWriter->setDeviceName(m_deviceName);
+    m_imageWriter->setTelescopeName(m_telescopeName);
     m_imageWriterThread->start();
     m_imageWriter->moveToThread(m_imageWriterThread);
 }
@@ -163,6 +166,9 @@ bool SjcServer::openCamera()
     if (verbose())
         cout << "\n" << m_recorder->cameraInfoString() << "\n" << endl;
 
+    CameraInfo cameraInfo = m_recorder->cameraInfo();
+    QMetaObject::invokeMethod(m_imageWriter, "setCameraInfo",
+                              Q_ARG(CameraInfo, cameraInfo));
     return true;
 }
 
@@ -252,6 +258,15 @@ void SjcServer::loadConfigFile()
     uint streamingPort = settings.value("ServerPort").toUInt(&ok);
     if (ok && streamingPort <= 65535)
         m_streamingPort = quint16(streamingPort);
+    settings.endGroup();
+
+    // Recording Section
+    settings.beginGroup("Recording");
+    m_outputFileNamePrefix = settings.value("FileNamePrefix").toString();
+    if (m_outputFileNamePrefix.isEmpty())
+        m_outputFileNamePrefix = m_deviceName;
+    m_outputDirectory = settings.value("Directory").toString();
+    m_telescopeName = settings.value("TelescopeName").toByteArray();
     settings.endGroup();
 }
 
@@ -448,15 +463,17 @@ void SjcServer::dcpMessageReceived()
                     arg = "closed";
                 sendNotification("set camerastate " + arg);
 
-                bool ok;
-                QVariant value;
-                if (m_recorder->getAttribute("ExposureValue", &value)) {
-                    arg = QByteArray::number(value.toUInt(&ok));
-                    if (ok) sendNotification("set exposure " + arg);
-                }
-                if (m_recorder->getAttribute("FrameRate", &value)) {
-                    arg = QByteArray::number(value.toFloat(&ok), 'f', 3);
-                    if (ok) sendNotification("set framerate " + arg);
+                if (arg != "closed") {
+                    bool ok;
+                    QVariant value;
+                    if (m_recorder->getAttribute("ExposureValue", &value)) {
+                        arg = QByteArray::number(value.toUInt(&ok));
+                        if (ok) sendNotification("set exposure " + arg);
+                    }
+                    if (m_recorder->getAttribute("FrameRate", &value)) {
+                        arg = QByteArray::number(value.toFloat(&ok), 'f', 3);
+                        if (ok) sendNotification("set framerate " + arg);
+                    }
                 }
             }
             return;
@@ -838,6 +855,30 @@ void SjcServer::dcpMessageReceived()
             QByteArray address = m_dcp->localAddress().toString().toAscii();
             QByteArray port = QByteArray::number(m_streamingPort);
             sendMessage(msg.replyMessage(address + " " + port));
+            return;
+        }
+
+        // get camerainfo
+        //     returns: <camera name> <unique id> <width> <height> <bitdepth>
+        if (identifier == "camerainfo")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            if (!m_recorder->isCameraOpen()) {
+                sendMessage(msg.ackMessage(Dcp::AckWrongModeError));
+                return;
+            }
+
+            sendMessage(msg.ackMessage());
+            CameraInfo info = m_recorder->cameraInfo();
+            QByteArray reply = m_deviceName + " " +
+                    QByteArray::number(uint(info.pvCameraInfo.UniqueId)) + " " +
+                    QByteArray::number(info.sensorWidth) + " " +
+                    QByteArray::number(info.sensorHeight) + " " +
+                    QByteArray::number(info.sensorBits);
+            sendMessage(msg.replyMessage(reply));
             return;
         }
 

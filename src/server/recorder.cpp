@@ -69,7 +69,22 @@ bool Recorder::openCamera(ulong cameraId)
         m_cameraMutex.unlock();
         return false;
     }
-    ulong camId = m_camera->cameraInfo().UniqueId;
+    m_cameraInfo.pvCameraInfo = m_camera->cameraInfo();
+    m_cameraInfo.hwAddress = m_camera->hwAddress().toAscii();
+    m_cameraInfo.ipAddress = m_camera->ipAddress().toAscii();
+    m_cameraInfo.sensorWidth = m_camera->sensorWidth();
+    m_cameraInfo.sensorHeight = m_camera->sensorHeight();
+    m_cameraInfo.sensorBits = m_camera->sensorBits();
+    quint32 timeStampFrequency;
+    if (!m_camera->getAttrUint32("TimeStampFrequency", &timeStampFrequency)) {
+        emit error(m_camera->errorString());
+        m_camera->close();
+        m_cameraInfo.clear();
+        m_cameraMutex.unlock();
+        return false;
+    }
+    m_cameraInfo.timeStampFrequency = timeStampFrequency;
+    ulong camId = m_cameraInfo.pvCameraInfo.UniqueId;
     m_cameraMutex.unlock();
 
     emit info(QString("Camera opened [%1].").arg(camId));
@@ -89,6 +104,7 @@ bool Recorder::closeCamera()
     if (m_camera->isOpen())
         emit info("Closing camera.");
     m_camera->close();
+    m_cameraInfo.clear();
     m_cameraMutex.unlock();
 
     clearFrameQueues();
@@ -136,6 +152,12 @@ bool Recorder::setNumBuffers(int numBuffers)
     }
     m_numBuffers = (numBuffers >= 1 ? numBuffers : 1);
     return true;
+}
+
+CameraInfo Recorder::cameraInfo() const
+{
+    QMutexLocker locker(&m_cameraMutex);
+    return m_cameraInfo;
 }
 
 QString Recorder::cameraInfoString() const

@@ -48,7 +48,7 @@ ImageStreamer::~ImageStreamer()
 
 bool ImageStreamer::listen(quint16 port)
 {
-    if (!m_tcpServer->listen(QHostAddress::AnyIPv6, port)) {
+    if (!m_tcpServer->listen(QHostAddress::Any, port)) {
         emit error("Streaming Server: " + m_tcpServer->errorString() + ".");
         return false;
     }

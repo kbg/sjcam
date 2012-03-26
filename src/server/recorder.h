@@ -35,6 +35,43 @@
 
 class Camera;
 
+struct CameraInfo
+{
+    CameraInfo() { clear(); }
+    CameraInfo(const tPvCameraInfoEx &pvCameraInfo_,
+               const QByteArray &hwAddress_,
+               const QByteArray &ipAddress_,
+               uint sensorWidth_,
+               uint sensorHeight_,
+               uint sensorBits_,
+               uint timeStampFrequency_)
+        : pvCameraInfo(pvCameraInfo_),
+          hwAddress(hwAddress_),
+          ipAddress(ipAddress_),
+          sensorWidth(sensorWidth_),
+          sensorHeight(sensorHeight_),
+          sensorBits(sensorBits_),
+          timeStampFrequency(timeStampFrequency_) {}
+
+    void clear() {
+        qMemSet(&pvCameraInfo, 0, sizeof(pvCameraInfo));
+        hwAddress.clear();
+        ipAddress.clear();
+        sensorWidth = 0;
+        sensorHeight = 0;
+        sensorBits = 0;
+        timeStampFrequency = 0;
+    }
+
+    tPvCameraInfoEx pvCameraInfo;
+    QByteArray hwAddress;
+    QByteArray ipAddress;
+    uint sensorWidth;
+    uint sensorHeight;
+    uint sensorBits;
+    uint timeStampFrequency;
+};
+
 class Recorder : public QThread
 {
     Q_OBJECT
@@ -57,6 +94,8 @@ public:
     int numBuffers() const;
     bool setNumBuffers(int numBuffers);
     bool isStopRequested() const;
+
+    CameraInfo cameraInfo() const;
     QString cameraInfoString() const;
 
 public slots:
@@ -79,6 +118,7 @@ private:
     mutable QMutex m_queueMutex;
     mutable QReadWriteLock m_stopRequestLock;
     Camera * const m_camera;
+    CameraInfo m_cameraInfo;
     QQueue<tPvFrame *> m_cameraQueue;
     QQueue<tPvFrame *> m_inputQueue;
     QQueue<tPvFrame *> m_outputQueue;

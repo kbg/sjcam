@@ -27,10 +27,12 @@
 #ifndef SJCAM_IMAGEWRITER_H
 #define SJCAM_IMAGEWRITER_H
 
+#include "recorder.h"
 #include <QtCore/QObject>
 #include <QtCore/QDir>
 #include <QtCore/QString>
-#include <PvApi.h>
+#include <QtCore/QByteArray>
+#include <fitsio.h>
 
 class ImageWriter : public QObject
 {
@@ -43,10 +45,13 @@ public:
     // these methods are NOT thread-safe!
     void setDirectory(const QString &directory);
     void setFileNamePrefix(const QString &prefix);
+    void setDeviceName(const QByteArray &deviceName);
+    void setTelescopeName(const QByteArray &telescopeName);
 
 public slots:
     void processFrame(tPvFrame *frame);
     void writeNextFrames(int count, int stepping);
+    void setCameraInfo(const CameraInfo &cameraInfo);
 
 signals:
     void frameFinished(tPvFrame *frame);
@@ -56,6 +61,19 @@ signals:
 
 protected:
     bool writeFrame(tPvFrame *frame);
+
+    bool writeKey(fitsfile *ff, const QByteArray &key, short value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, ushort value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, int value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, uint value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, long value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, ulong value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, qint64 value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, float value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, double value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, const QByteArray &key, QByteArray value, const QByteArray &comment = QByteArray());
+    bool writeKey(fitsfile *ff, int datatype, const char *keyname, void *value, const char *comment);
+
     QString fitsioErrorString(int errcode) const;
     void sendError(const QString &msg, int errcode = 0) const;
 
@@ -63,9 +81,73 @@ private:
     Q_DISABLE_COPY(ImageWriter)
     QDir m_directory;
     QString m_fileNamePrefix;
+    QByteArray m_deviceName;
+    QByteArray m_telescopeName;
+    CameraInfo m_cameraInfo;
     int m_count;
     int m_stepping;
     int m_i;
 };
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  short value, const QByteArray &comment)
+{
+    return writeKey(ff, TSHORT, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  ushort value, const QByteArray &comment)
+{
+    return writeKey(ff, TUSHORT, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  int value, const QByteArray &comment)
+{
+    return writeKey(ff, TINT, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  uint value, const QByteArray &comment)
+{
+    return writeKey(ff, TUINT, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  long value, const QByteArray &comment)
+{
+    return writeKey(ff, TLONG, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  ulong value, const QByteArray &comment)
+{
+    return writeKey(ff, TULONG, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+              qint64 value, const QByteArray &comment)
+{
+    return writeKey(ff, TLONGLONG, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  float value, const QByteArray &comment)
+{
+    return writeKey(ff, TFLOAT, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  double value, const QByteArray &comment)
+{
+    return writeKey(ff, TDOUBLE, key, &value, comment);
+}
+
+inline bool ImageWriter::writeKey(fitsfile *ff, const QByteArray &key,
+                                  QByteArray value, const QByteArray &comment)
+{
+    return writeKey(ff, TSTRING, key, value.data(), comment);
+}
+
 
 #endif // SJCAM_IMAGEWRITER_H

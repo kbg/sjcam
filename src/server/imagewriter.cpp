@@ -25,9 +25,10 @@
  */
 
 #include "imagewriter.h"
+#include "version.h"
 #include <QtCore/QDateTime>
+#include <QtCore/QtEndian>
 #include <QtCore/QDebug>
-#include <fitsio.h>
 
 ImageWriter::ImageWriter(QObject *parent)
     : QObject(parent),
@@ -64,11 +65,26 @@ void ImageWriter::processFrame(tPvFrame *frame)
     emit frameFinished(frame);
 }
 
+void ImageWriter::setDeviceName(const QByteArray &deviceName)
+{
+    m_deviceName = deviceName;
+}
+
+void ImageWriter::setTelescopeName(const QByteArray &telescopeName)
+{
+    m_telescopeName = telescopeName;
+}
+
 void ImageWriter::writeNextFrames(int count, int stepping)
 {
     m_count = count > 0 ? count : 0;
     m_stepping = stepping > 1 ? stepping : 1;
     m_i = 0;
+}
+
+void ImageWriter::setCameraInfo(const CameraInfo &cameraInfo)
+{
+    m_cameraInfo = cameraInfo;
 }
 
 bool ImageWriter::writeFrame(tPvFrame *frame)
@@ -105,7 +121,42 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
     fits_delete_key(ff, "COMMENT", &errcode);
     fits_delete_key(ff, "COMMENT", &errcode);
 
-    //! \todo Insert some more header entries.
+    writeKey(ff, "CREATOR", QByteArray("SjcServer v") + SJCAM_VERSION_STRING,
+             "program that created this file");
+    writeKey(ff, "DATE", now.toString("yyyy-MM-ddThh:mm:ss.zzz").toAscii(),
+             "[utc] file creation time");
+    writeKey(ff, "FILENAME", fileName.toAscii(), "original file name");
+    writeKey(ff, "STATUS", "raw", "file status");
+
+    writeKey(ff, "INSTRUME", m_deviceName, "instrument");
+    if (!m_telescopeName.isEmpty())
+        writeKey(ff, "TELESCOP", m_telescopeName, "telescope name");
+
+    writeKey(ff, "CAMMODEL", m_cameraInfo.pvCameraInfo.ModelName,
+             "camera model name");
+    writeKey(ff, "CAMSERNO", m_cameraInfo.pvCameraInfo.SerialNumber,
+             "camera serial number");
+    writeKey(ff, "CAMHWADR", m_cameraInfo.hwAddress.replace('-', ':'),
+             "camera hardware address");
+    writeKey(ff, "CAMFWVER", m_cameraInfo.pvCameraInfo.FirmwareVersion,
+             "camera firmware version");
+
+    writeKey(ff, "FRAME-NO", frame->FrameCount, "frame number (rolls at 65535)");
+
+    quint32 tsFreq = m_cameraInfo.timeStampFrequency;
+    if (tsFreq == 0) tsFreq = 1;
+    double timeStamp = frame->TimestampHi * 4294967295.0 + frame->TimestampLo;
+    timeStamp *= 1e6 / tsFreq;
+    writeKey(ff, "TIMESTAM", qRound64(timeStamp),
+             "[us] time stamp (time since camera power on)");
+
+    if (frame->AncillaryBuffer && frame->AncillarySize >= 12) {
+        quint32 *buf = reinterpret_cast<quint32 *>(frame->AncillaryBuffer);
+        writeKey(ff, "EXPTIME", qFromBigEndian(buf[2]), "[us] exposure time");
+    }
+    writeKey(ff, "BITDEPTH", frame->BitDepth, "significant bits per pixel");
+
+    //! \todo Add more header entries.
 
     long fpixel[2] = { 1, 1 };
     LONGLONG nelem = naxes[0] * naxes[1];
@@ -123,6 +174,19 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
         return false;
     }
 
+    return true;
+}
+
+bool ImageWriter::writeKey(fitsfile *ff, int datatype, const char *keyname,
+                           void *value, const char *comment)
+{
+    int errcode = 0;
+    const char *comm = (comment == 0 || *comment == '\0') ? 0 : comment;
+    fits_write_key(ff, datatype, keyname, value, comm, &errcode);
+    if (errcode != 0) {
+        sendError("Cannot write FITS header entry.", errcode);
+        return false;
+    }
     return true;
 }
 
