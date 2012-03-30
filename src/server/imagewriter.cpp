@@ -95,13 +95,14 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
     QString fileName = QString("%1_%2.fits")
             .arg(m_fileNamePrefix)
             .arg(now.toString("yyyyMMdd-hhmmsszzz"));
-    QString fullFileName = m_directory.absoluteFilePath(fileName);
+    QString tempFileName = fileName + ".tmp";
+    QString fullTempFileName = m_directory.absoluteFilePath(tempFileName);
 
     int errcode = 0;
     fitsfile *ff = 0;
-    fits_create_diskfile(&ff, fullFileName.toAscii(), &errcode);
+    fits_create_diskfile(&ff, fullTempFileName.toAscii(), &errcode);
     if (errcode) {
-        sendError("Cannot create the file '" + fullFileName + "'.", errcode);
+        sendError("Cannot create the file '" + fullTempFileName + "'.", errcode);
         if (ff) fits_close_file(ff, &errcode);
         return false;
     }
@@ -171,6 +172,11 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
     fits_close_file(ff, &errcode);
     if (errcode) {
         sendError("Cannot close file.", errcode);
+        return false;
+    }
+
+    if (!m_directory.rename(tempFileName, fileName)) {
+        sendError("Cannot rename temporary file.");
         return false;
     }
 
