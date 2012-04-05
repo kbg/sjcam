@@ -1,0 +1,12 @@
+
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Type=Application
+Name=GSJC1
+Comment=GREGOR Slit Jaw Camera 1
+Categories=Application;
+Exec=gsjcgui1
+Icon=/home/observer/.opt/sjcam/camera-sj.png
+Terminal=false
+StartupNotify=false
