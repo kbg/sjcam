@@ -40,6 +40,9 @@ Server:
                   2 -> cannot set y-binning value
                   3 -> cannot set any binning values
 
+    set writeframes <count> [<stepping>]
+        returns: FIN
+
     get notify
         returns: ( true | false )
 
@@ -77,7 +80,10 @@ Server:
                   3 -> cannot get any binning values
 
     get streaminghost
-        returns: <IP address> <port>
+        returns: <address> <port>
+
+    get camerainfo
+        returns: <camera name> <unique id> <width> <height> <bitdepth>
 
     get version
         returns: <server version>
@@ -88,11 +94,12 @@ Server:
 Client:
     set nop
     set camerastate ( closed | opened | capturing )
-    set exposure <msecs>
+    set exposure <usecs>
     set framerate <Hz>
     set roi <left> <top> <width> <height>
     set maximagesize <width> <height>
     set binning <xbinning> <ybinning>
+    set framewritten <number> <total>
         returns: FIN
 
     get version
