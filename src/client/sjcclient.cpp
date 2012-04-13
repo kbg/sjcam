@@ -33,6 +33,7 @@
 #include <sjcdata.h>
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QtCore>
+#include <QtGui/QMessageBox>
 #include <QtNetwork/QHostAddress>
 
 SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
@@ -633,5 +634,19 @@ void SjcClient::on_actionConnect_triggered(bool checked)
 
 void SjcClient::on_actionAbout_triggered()
 {
-
+    QString aboutText = tr(
+                "<h2>SjcClient %1</h2>" \
+                "<p><b>Library Versions:</b><br>" \
+                "&nbsp;&nbsp;DcpClient %2<br>" \
+                "&nbsp;&nbsp;Qt %3</p>" \
+                "<p>%4</p>"
+            )
+            .arg(SJCAM_VERSION_STRING)
+            .arg(Dcp::versionString())
+            .arg(qVersion())
+            .arg(QString(SJCAM_COPYRIGHT_STRING)
+                 .replace("\n", "<br>")
+                 .replace(" fuer ", " f&uuml;r ")
+        );
+    QMessageBox::about(this, tr("About SjcClient"), aboutText);
 }
