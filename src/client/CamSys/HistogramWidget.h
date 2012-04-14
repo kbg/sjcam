@@ -26,7 +26,7 @@
 #ifndef CAMSYS_HISTOGRAM_WIDGET_H
 #define CAMSYS_HISTOGRAM_WIDGET_H
 
-#include <QFrame>
+#include <QtGui/QFrame>
 
 class QColor;
 class QPaintEvent;

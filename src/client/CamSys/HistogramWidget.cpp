@@ -23,16 +23,16 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
-#include <QPainter>
-#include <QPaintEvent>
-#include <QRubberBand>
-#include <cmath>
-
-#include "Histogram.h"
-#include "ColorTable.h"
 #include "HistogramWidget.h"
+#include "Histogram.h"
+#include "Image.h"
+#include "ColorTable.h"
 #include "ColorRange.h"
+#include <QtCore/QtDebug>
+#include <QtGui/QPainter>
+#include <QtGui/QPaintEvent>
+#include <QtGui/QRubberBand>
+#include <cmath>
 
 namespace CamSys {
 

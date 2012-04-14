@@ -25,15 +25,14 @@
 
 #include "ImageScrollArea.h"
 #include "ImageWidget.h"
-
-#include <QtDebug>
-#include <QEvent>
-#include <QMouseEvent>
-#include <QRubberBand>
-#include <QStyle>
-#include <QScrollBar>
-#include <QColor>
-#include <QCursor>
+#include <QtCore/QtDebug>
+#include <QtCore/QEvent>
+#include <QtGui/QMouseEvent>
+#include <QtGui/QRubberBand>
+#include <QtGui/QStyle>
+#include <QtGui/QScrollBar>
+#include <QtGui/QColor>
+#include <QtGui/QCursor>
 
 namespace CamSys {
 

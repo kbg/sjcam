@@ -23,15 +23,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
-#include <QImage>
-#include <QPainter>
-#include <QPaintEvent>
-#include <QMouseEvent>
-
+#include "ImageWidget.h"
 #include "Image.h"
 #include "ColorTable.h"
-#include "ImageWidget.h"
+#include <QtCore/QtDebug>
+#include <QtGui/QImage>
+#include <QtGui/QPainter>
+#include <QtGui/QPaintEvent>
+#include <QtGui/QMouseEvent>
 
 namespace CamSys {
 

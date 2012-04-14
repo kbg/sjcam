@@ -23,14 +23,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
-#include <QtGui>
-#include <limits>
-#include <cmath>
-
+#include "ImageRenderer.h"
 #include "Image.h"
 #include "ColorTable.h"
-#include "ImageRenderer.h"
+#include <QtCore/QtDebug>
+#include <QtGui/QtGui>
+#include <limits>
+#include <cmath>
 
 namespace CamSys {
 

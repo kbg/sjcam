@@ -23,12 +23,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
-#include <QtGui>
-
-#include "ColorTable.h"
-#include "ColorRange.h"
 #include "ColorBar.h"
+#include "ColorRange.h"
+#include <QtGui/QRgb>
+#include <QtGui/QtGui>
 
 namespace CamSys {
 

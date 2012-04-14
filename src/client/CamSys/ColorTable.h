@@ -26,8 +26,8 @@
 #ifndef CAMSYS_COLORTABLE_H
 #define CAMSYS_COLORTABLE_H
 
-#include <QRgb>
-#include <QVector>
+#include <QtGui/QRgb>
+#include <QtCore/QVector>
 
 namespace CamSys {
 

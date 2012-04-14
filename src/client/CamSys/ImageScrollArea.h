@@ -26,7 +26,7 @@
 #ifndef CAMSYS_IMAGE_SCROLL_AREA_H
 #define CAMSYS_IMAGE_SCROLL_AREA_H
 
-#include <QScrollArea>
+#include <QtGui/QScrollArea>
 
 class QEvent;
 class QMouseEvent;

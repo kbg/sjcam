@@ -23,8 +23,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
 #include "ColorRange.h"
+#include <QtCore/QtDebug>
 
 #define ASSERT_VALID_RANGE() \
     Q_ASSERT(m_minValue <= m_minColorValue); \

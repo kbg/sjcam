@@ -23,13 +23,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
+#include "Histogram.h"
+#include "Image.h"
 #include <climits> // for INT_MIN and INT_MAX
 #include <cfloat>  // for DBL_MIN and DBL_MAX
 #include <cmath>   // for std::sqrt
-
-#include "Image.h"
-#include "Histogram.h"
 
 namespace CamSys {
 

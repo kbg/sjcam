@@ -23,16 +23,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QDebug>
-#include <QFile>
-#include <QIODevice>
-#include <QDataStream>
-#include <QSysInfo>
-
+#include "Image.h"
+#include <QtCore/QDebug>
+#include <QtCore/QFile>
+#include <QtCore/QIODevice>
+#include <QtCore/QDataStream>
+#include <QtCore/QSysInfo>
 #include <cstring>    // for std::memcpy
 #include <algorithm>  // for std::swap, std::reverse, ...
-
-#include "Image.h"
 
 namespace CamSys {
 

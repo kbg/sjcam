@@ -26,8 +26,8 @@
 #ifndef CAMSYS_COLOR_BAR_H
 #define CAMSYS_COLOR_BAR_H
 
-#include <QWidget>
 #include "ColorTable.h"
+#include <QtGui/QWidget>
 
 namespace CamSys {
 

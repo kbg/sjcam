@@ -26,13 +26,11 @@
 #ifndef CAMSYS_HISTOGRAM_H
 #define CAMSYS_HISTOGRAM_H
 
-#include <QtDebug>
-#include <QVector>
-#include "Image.h"
+#include <QtCore/QVector>
 
 namespace CamSys {
 
-//class Image;
+class Image;
 
 //! \addtogroup CamSysCore
 //! @{

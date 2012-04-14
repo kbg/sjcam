@@ -23,9 +23,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <QtDebug>
-#include <QFile>
 #include "ColorTable.h"
+#include <QtCore/QFile>
 
 #include <iostream>
 using std::cout;

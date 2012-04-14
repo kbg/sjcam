@@ -27,7 +27,7 @@
 #define CAMSYS_IMAGE_WIDGET_H
 
 #include "ImageRenderer.h"
-#include <QWidget>
+#include <QtGui/QWidget>
 
 namespace CamSys {
 

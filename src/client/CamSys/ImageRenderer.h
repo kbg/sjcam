@@ -26,7 +26,7 @@
 #ifndef CAMSYS_IMAGE_RENDERER_H
 #define CAMSYS_IMAGE_RENDERER_H
 
-#include <qglobal.h>
+#include <QtCore/qglobal.h>
 
 class QImage;
 

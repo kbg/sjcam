@@ -26,8 +26,8 @@
 #ifndef CAMSYS_IMAGE_H
 #define CAMSYS_IMAGE_H
 
-#include <qglobal.h>
-#include <QPoint>
+#include <QtCore/qglobal.h>
+#include <QtCore/QPoint>
 #include <limits>
 
 class QString;

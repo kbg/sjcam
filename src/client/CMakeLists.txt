@@ -14,6 +14,15 @@ set(sjcclient_SRCS
     cameradock.cpp
     recordingdock.cpp
     histogramdock.cpp
+    CamSys/ColorBar.cpp
+    CamSys/ColorRange.cpp
+    CamSys/ColorTable.cpp
+    CamSys/Histogram.cpp
+    CamSys/HistogramWidget.cpp
+    CamSys/Image.cpp
+    CamSys/ImageRenderer.cpp
+    CamSys/ImageScrollArea.cpp
+    CamSys/ImageWidget.cpp
 )
 qt4_automoc(${sjcclient_SRCS})
 qt4_wrap_cpp(sjcclient_MOC_SRCS
@@ -21,6 +30,10 @@ qt4_wrap_cpp(sjcclient_MOC_SRCS
     cameradock.h
     recordingdock.h
     histogramdock.h
+    CamSys/ColorBar.h
+    CamSys/HistogramWidget.h
+    CamSys/ImageScrollArea.h
+    CamSys/ImageWidget.h
 )
 qt4_wrap_ui(sjcclient_UI_HDRS
     ui/sjcclient.ui
