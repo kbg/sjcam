@@ -29,6 +29,13 @@
 
 #include <QtGui/QDockWidget>
 
+namespace CamSys {
+    class HistogramWidget;
+    class ColorBar;
+    class ColorTable;
+    class Image;
+}
+
 namespace Ui {
     class HistogramDock;
 }
@@ -41,8 +48,31 @@ public:
     explicit HistogramDock(QWidget *parent = 0);
     ~HistogramDock();
 
+    void clear();
+    void setImage(CamSys::Image *image);
+    void setImage(CamSys::Image *image, double minValue, double maxValue);
+    void setColorRange(double minValue, double maxValue);
+    void setColorTable(const CamSys::ColorTable &colorTable);
+    double minColorValue() const;
+    double maxColorValue() const;
+
+public slots:
+    void setSelection(double lowerBound, double upperBound);
+
+signals:
+    void colorSpreadChanging(double minColorValue, double maxColorValue);
+    void colorSpreadChanged(double minColorValue, double maxColorValue);
+
+private slots:
+    void histWidget_selectionChanging(qreal lowerBound, qreal upperBound);
+    void histWidget_selectionChanged(qreal lowerBound, qreal upperBound);
+
 private:
     Ui::HistogramDock *ui;
+    CamSys::HistogramWidget *m_histWidget;
+    CamSys::ColorBar *m_colorBar;
+    double m_minValue;
+    double m_maxValue;
 };
 
 #endif // SJCAM_HISTOGRAMDOCK_H

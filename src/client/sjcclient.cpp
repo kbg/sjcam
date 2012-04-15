@@ -31,6 +31,9 @@
 #include "histogramdock.h"
 #include "version.h"
 #include <sjcdata.h>
+#include "CamSys/ImageScrollArea.h"
+#include "CamSys/ImageWidget.h"
+#include "CamSys/Image.h"
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QtCore>
 #include <QtGui/QMessageBox>
@@ -42,6 +45,9 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
       cout(stdout, QIODevice::WriteOnly),
       m_socket(new QTcpSocket),
       m_dcp(new Dcp::Client),
+      m_scrollArea(new CamSys::ImageScrollArea),
+      m_imageWidget(new CamSys::ImageWidget),
+      m_image(new CamSys::Image),
       m_cameraDock(new CameraDock),
       m_recordingDock(new RecordingDock),
       m_histogramDock(new HistogramDock),
@@ -59,6 +65,19 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     addDockWidget(Qt::RightDockWidgetArea, m_histogramDock);
     addDockWidget(Qt::RightDockWidgetArea, m_cameraDock);
     addDockWidget(Qt::RightDockWidgetArea, m_recordingDock);
+
+    m_histogramDock->setColorRange(0, 4095);
+    m_imageWidget->setColorRange(0, 4095);
+    m_imageWidget->setMouseTracking(true);
+    m_imageWidget->setCursor(Qt::CrossCursor);
+    m_scrollArea->setBackgroundRole(QPalette::Dark);
+    m_scrollArea->setAlignment(Qt::AlignCenter);
+    m_scrollArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_scrollArea->setWidget(m_imageWidget);
+    setCentralWidget(m_scrollArea);
+
+    connect(m_histogramDock, SIGNAL(colorSpreadChanged(double,double)),
+            SLOT(histDock_colorSpreadChanged(double,double)));
 
     connect(m_dcp, SIGNAL(error(Dcp::Client::Error)),
                    SLOT(dcpError(Dcp::Client::Error)));
@@ -108,6 +127,7 @@ SjcClient::~SjcClient()
     delete m_recordingDock;
     delete m_histogramDock;
     delete ui;
+    delete m_image;
 }
 
 void SjcClient::connectToServer()
@@ -363,8 +383,8 @@ void SjcClient::dcpMessageReceived()
                     m_socket->disconnectFromHost();
                     m_socket->waitForDisconnected();
                 }
-                m_socket->connectToHost(m_streamingServerName, m_streamingServerPort);
             }
+            m_socket->connectToHost(m_streamingServerName, m_streamingServerPort);
         }
         return;
     }
@@ -606,11 +626,39 @@ void SjcClient::socketReadyRead()
     is.setDevice(m_socket);
     is >> size >> jpeg;
 
-    QImage image = QImage::fromData(jpeg, "jpeg");
-    ui->labelImage->resize(image.size());
-    ui->labelImage->setPixmap(QPixmap::fromImage(image));
+    QImage qimage = QImage::fromData(jpeg, "jpeg");
+    int width = qimage.width();
+    int height = qimage.height();
 
-    m_socket->write("gimmimore");
+    bool sizeChanged = false;
+    if (width != m_image->width() || height != m_image->height()) {
+        m_image->reset(width, height, CamSys::Image::Uint16, 12);
+        sizeChanged = true;
+    }
+
+    for (int i = 0; i < height; ++i) {
+        const uchar *srcLine = qimage.scanLine(i);
+        quint16 *destLine = m_image->scanLine<quint16>(i);
+        for (int j = 0; j < width; ++j) {
+            destLine[j] = quint16(srcLine[j]) * 16;
+        }
+    }
+
+    m_imageWidget->setColorRange(m_histogramDock->minColorValue(),
+                                 m_histogramDock->maxColorValue());
+    m_imageWidget->setImage(m_image);
+    if (sizeChanged)
+        m_scrollArea->zoomBestFit();
+    m_histogramDock->setImage(m_image);
+
+    m_socket->write("moreplease");
+}
+
+void SjcClient::histDock_colorSpreadChanged(double minColorValue,
+                                            double maxColorValue)
+{
+    m_imageWidget->setColorRange(minColorValue, maxColorValue);
+    m_imageWidget->setImage(m_image);
 }
 
 void SjcClient::requestTimer_timeout()

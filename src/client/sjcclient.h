@@ -40,6 +40,12 @@ class CameraDock;
 class RecordingDock;
 class HistogramDock;
 
+namespace CamSys {
+    class Image;
+    class ImageWidget;
+    class ImageScrollArea;
+}
+
 namespace Ui {
     class SjcClient;
 }
@@ -94,6 +100,7 @@ protected slots:
     void socketReadyRead();
 
 private slots:
+    void histDock_colorSpreadChanged(double minColorValue, double maxColorValue);
     void requestTimer_timeout();
     void on_actionConnect_triggered(bool checked);
     void on_actionAbout_triggered();
@@ -105,6 +112,9 @@ private:
     Dcp::Client * const m_dcp;
     Dcp::ReplyParser m_reply;
     Dcp::CommandParser m_command;
+    CamSys::ImageScrollArea *m_scrollArea;
+    CamSys::ImageWidget *m_imageWidget;
+    CamSys::Image *m_image;
     CameraDock *m_cameraDock;
     RecordingDock *m_recordingDock;
     HistogramDock *m_histogramDock;
