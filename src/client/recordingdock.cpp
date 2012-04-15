@@ -13,6 +13,21 @@ RecordingDock::~RecordingDock()
     delete ui;
 }
 
+void RecordingDock::reset()
+{
+    setCount(1);
+    setStepping(1);
+    setFramesWritten(0, 0);
+}
+
+void RecordingDock::setControlsEnabled(bool enable)
+{
+    ui->spinCount->setEnabled(enable);
+    ui->spinStepping->setEnabled(enable);
+    ui->buttonSave->setEnabled(enable);
+    ui->buttonStop->setEnabled(enable);
+}
+
 int RecordingDock::count() const
 {
     return ui->spinCount->value();
@@ -41,6 +56,7 @@ void RecordingDock::setFramesWritten(int n, int total)
 
 void RecordingDock::on_buttonSave_clicked()
 {
+    setFramesWritten(0, count());
     emit writeFrames(count(), stepping());
 }
 

@@ -60,10 +60,21 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
 
     switch (m_state)
     {
-    case ClosedState:
     case UnknownState:
         ui->buttonOpen->setChecked(false);
         ui->buttonCapture->setChecked(false);
+        ui->buttonOpen->setEnabled(false);
+        ui->buttonCapture->setEnabled(false);
+        ui->spinExposure->setEnabled(false);
+        ui->spinFrameRate->setEnabled(false);
+        ui->buttonExposure->setEnabled(false);
+        ui->buttonFrameRate->setEnabled(false);
+        reset();
+        break;
+    case ClosedState:
+        ui->buttonOpen->setChecked(false);
+        ui->buttonCapture->setChecked(false);
+        ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(false);
         ui->spinExposure->setEnabled(false);
         ui->spinFrameRate->setEnabled(false);
@@ -74,6 +85,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
     case OpenedState:
         ui->buttonOpen->setChecked(true);
         ui->buttonCapture->setChecked(false);
+        ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(true);
         ui->spinExposure->setEnabled(true);
         ui->spinFrameRate->setEnabled(true);
@@ -83,6 +95,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
     case CapturingState:
         ui->buttonOpen->setChecked(true);
         ui->buttonCapture->setChecked(true);
+        ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(true);
         ui->spinExposure->setEnabled(true);
         ui->spinFrameRate->setEnabled(true);

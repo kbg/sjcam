@@ -15,6 +15,9 @@ public:
     explicit RecordingDock(QWidget *parent = 0);
     ~RecordingDock();
 
+    void reset();
+    void setControlsEnabled(bool enable);
+
     int count() const;
     void setCount(int count);
 
