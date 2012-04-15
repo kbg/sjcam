@@ -2,5 +2,10 @@
     <qresource prefix="/">
         <file>icons/camera-sj.svg</file>
         <file>icons/view-refresh.svg</file>
+        <file>icons/server.svg</file>
+        <file>icons/zoom-out.svg</file>
+        <file>icons/zoom-best-fit.svg</file>
+        <file>icons/zoom-in.svg</file>
+        <file>icons/zoom-original.svg</file>
     </qresource>
 </RCC>
