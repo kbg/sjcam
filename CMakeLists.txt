@@ -13,6 +13,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # Build options
 option(BUILD_SERVER "Build Sjcam server." TRUE)
 option(BUILD_CLIENT "Build Sjcam client." TRUE)
+option(BUILD_STARTER "Build program starter." TRUE)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 # Find libraries

@@ -5,3 +5,7 @@ endif()
 if(BUILD_CLIENT)
   add_subdirectory(client)
 endif()
+
+if (BUILD_STARTER)
+  add_subdirectory(starter)
+endif()
