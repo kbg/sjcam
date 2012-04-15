@@ -88,7 +88,7 @@ ColorBarPrivate::ColorBarPrivate(ColorBar *qq, const ColorRange &range,
     q->setContentsMargins(0, 0, 0, 0);
 
     labelImage.setScaledContents(true);
-    labelImage.setMinimumSize(256, 20);
+    labelImage.setMinimumSize(100, 20);
     labelImage.setFrameStyle(QFrame::Box | QFrame::Plain);
 
     QVBoxLayout *layout = new QVBoxLayout(q);
@@ -209,6 +209,11 @@ ColorBar::ColorBar(double minValue, double maxValue,
 ColorBar::~ColorBar()
 {
     delete d_ptr;
+}
+
+QSize ColorBar::sizeHint() const
+{
+    return QSize(256, 0);
 }
 
 /*! \brief Set the frame style of the bar part.

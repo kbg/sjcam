@@ -53,6 +53,7 @@ public:
              QWidget *parent = 0);
 
     virtual ~ColorBar();
+    QSize sizeHint() const;
 
     void setBarFrameStyle(int style);
     int barFrameStyle() const;
