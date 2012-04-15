@@ -28,6 +28,7 @@
 #define SJCAM_SJCCLIENT_H
 
 #include "cmdlineopts.h"
+#include "cameradock.h"
 #include <dcpclient/dcpclient.h>
 #include <QtGui/QMainWindow>
 #include <QtCore/QTextStream>
@@ -36,7 +37,7 @@
 #include <QtNetwork/QTcpSocket>
 
 class QTimer;
-class CameraDock;
+class QLabel;
 class RecordingDock;
 class HistogramDock;
 
@@ -78,6 +79,9 @@ protected:
     void sendMessage(const Dcp::Message &msg);
     Dcp::Message sendMessage(const QByteArray &data);
     void sendRequest(const QByteArray &data);
+    void updateStatusBarDcp(Dcp::Client::State state);
+    void updateStatusBarStream(QAbstractSocket::SocketState state);
+    void updateStatusBarCamera(CameraDock::CameraState state);
 
 protected slots:
     void dcpError(Dcp::Client::Error error);
@@ -118,6 +122,9 @@ private:
     CameraDock *m_cameraDock;
     RecordingDock *m_recordingDock;
     HistogramDock *m_histogramDock;
+    QLabel *m_labelDcpStatus;
+    QLabel *m_labelStreamStatus;
+    QLabel *m_labelCameraStatus;
     bool m_sjcamAlive;
     QTimer *m_requestTimer;
     int m_requestTimeout;

@@ -26,7 +26,6 @@
 
 #include "sjcclient.h"
 #include "ui_sjcclient.h"
-#include "cameradock.h"
 #include "recordingdock.h"
 #include "histogramdock.h"
 #include "version.h"
@@ -37,6 +36,7 @@
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QtCore>
 #include <QtGui/QMessageBox>
+#include <QtGui/QLabel>
 #include <QtNetwork/QHostAddress>
 
 SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
@@ -51,6 +51,9 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
       m_cameraDock(new CameraDock),
       m_recordingDock(new RecordingDock),
       m_histogramDock(new HistogramDock),
+      m_labelDcpStatus(new QLabel),
+      m_labelStreamStatus(new QLabel),
+      m_labelCameraStatus(new QLabel),
       m_sjcamAlive(false),
       m_requestTimer(new QTimer),
       m_requestTimeout(10000),
@@ -61,6 +64,13 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(":/icons/camera-sj.svg"));
+
+    ui->statusbar->addPermanentWidget(m_labelDcpStatus);
+    ui->statusbar->addPermanentWidget(m_labelStreamStatus);
+    ui->statusbar->addPermanentWidget(m_labelCameraStatus);
+    updateStatusBarDcp(Dcp::Client::UnconnectedState);
+    updateStatusBarStream(QAbstractSocket::UnconnectedState);
+    updateStatusBarCamera(CameraDock::UnknownState);
 
     addDockWidget(Qt::RightDockWidgetArea, m_histogramDock);
     addDockWidget(Qt::RightDockWidgetArea, m_cameraDock);
@@ -75,9 +85,15 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     m_scrollArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_scrollArea->setWidget(m_imageWidget);
     setCentralWidget(m_scrollArea);
+    m_scrollArea->setFocus();
 
     connect(m_histogramDock, SIGNAL(colorSpreadChanged(double,double)),
             SLOT(histDock_colorSpreadChanged(double,double)));
+
+    connect(ui->actionZoomIn, SIGNAL(triggered()), m_scrollArea, SLOT(zoomIn()));
+    connect(ui->actionZoomOut, SIGNAL(triggered()), m_scrollArea, SLOT(zoomOut()));
+    connect(ui->actionZoomNormal, SIGNAL(triggered()), m_scrollArea, SLOT(zoomNormalSize()));
+    connect(ui->actionZoomBestFit, SIGNAL(triggered()), m_scrollArea, SLOT(zoomBestFit()));
 
     connect(m_dcp, SIGNAL(error(Dcp::Client::Error)),
                    SLOT(dcpError(Dcp::Client::Error)));
@@ -140,6 +156,7 @@ void SjcClient::disconnectFromServer()
     sendMessage("set notify false");
     m_dcp->waitForMessagesWritten(1000);
     m_dcp->disconnectFromServer();
+    m_socket->disconnectFromHost();
 }
 
 void SjcClient::loadSettings()
@@ -233,6 +250,50 @@ void SjcClient::sendRequest(const QByteArray &identifier)
     m_requestMap[msg.snr()] = RequestItem(identifier);
 }
 
+void SjcClient::updateStatusBarDcp(Dcp::Client::State state)
+{
+    QString s = tr("DCP: ");
+    if (state == Dcp::Client::ConnectingState)
+        s += tr("<font color=red>Connecting</font>");
+    else if (state == Dcp::Client::ConnectedState)
+        s += tr("<font color=blue>Connected</font>");
+    else if (state == Dcp::Client::UnconnectedState)
+        s += tr("<font color=red>Disconnected</font>");
+    else
+        return;
+    m_labelDcpStatus->setText(s);
+}
+
+void SjcClient::updateStatusBarStream(QAbstractSocket::SocketState state)
+{
+    QString s = tr("&nbsp;&nbsp;Stream: ");
+    if (state == QAbstractSocket::ConnectingState)
+        s += tr("<font color=red>Connecting</font>");
+    else if (state == QAbstractSocket::ConnectedState)
+        s += tr("<font color=blue>Connected</font>");
+    else if (state == QAbstractSocket::UnconnectedState)
+        s += tr("<font color=red>Disconnected</font>");
+    else
+        return;
+    m_labelStreamStatus->setText(s);
+}
+
+void SjcClient::updateStatusBarCamera(CameraDock::CameraState state)
+{
+    QString s = tr("&nbsp;&nbsp;Camera: ");
+    if (state == CameraDock::UnknownState)
+        s += tr("<font color=red>Unknown</font>");
+    else if (state == CameraDock::ClosedState)
+        s += tr("<font color=red>Closed</font>");
+    else if (state == CameraDock::OpenedState)
+        s += tr("<font color=green>Opened</font>");
+    else if (state == CameraDock::CapturingState)
+        s += tr("<font color=blue>Capturing</font>");
+    else
+        return;
+    m_labelCameraStatus->setText(s);
+}
+
 void SjcClient::dcpError(Dcp::Client::Error error)
 {
     Q_UNUSED(error);
@@ -242,6 +303,8 @@ void SjcClient::dcpError(Dcp::Client::Error error)
 
 void SjcClient::dcpStateChanged(Dcp::Client::State state)
 {
+    updateStatusBarDcp(state);
+
     // debug message output only
     if (!m_verbose)
         return;
@@ -282,6 +345,10 @@ void SjcClient::dcpDisconnected()
     m_requestTimer->stop();
     m_requestMap.clear();
     m_sjcamAlive = false;
+    m_socket->disconnectFromHost();
+    m_cameraDock->setCameraState(CameraDock::UnknownState);
+    updateStatusBarCamera(CameraDock::UnknownState);
+    setWindowTitle(tr("Slit Jaw Camera"));
 }
 
 void SjcClient::dcpMessageReceived()
@@ -337,10 +404,16 @@ void SjcClient::dcpMessageReceived()
                 sendRequest("exposure");
                 sendRequest("framerate");
             }
-            else
+            else {
                 setWindowTitle(tr("Slit Jaw Camera"));
+                m_recordingDock->setFramesWritten(0, 0);
+                m_image->clear();
+                m_imageWidget->setImage(m_image);
+                m_histogramDock->setImage(m_image);
+            }
 
             m_cameraDock->setCameraState(state);
+            updateStatusBarCamera(state);
         }
         else if (identifier == "camerainfo")
         {
@@ -378,11 +451,11 @@ void SjcClient::dcpMessageReceived()
                     ushort value = args[1].toUShort(&ok);
                     if (ok) m_streamingServerPort = value;
                 }
-
-                if (m_socket->state() != QAbstractSocket::UnconnectedState) {
-                    m_socket->disconnectFromHost();
+            }
+            if (m_socket->state() != QAbstractSocket::UnconnectedState) {
+                m_socket->disconnectFromHost();
+                if (m_socket->state() != QAbstractSocket::UnconnectedState)
                     m_socket->waitForDisconnected();
-                }
             }
             m_socket->connectToHost(m_streamingServerName, m_streamingServerPort);
         }
@@ -435,6 +508,7 @@ void SjcClient::dcpMessageReceived()
             }
             sendMessage(msg.ackMessage());
             m_cameraDock->setCameraState(state);
+            updateStatusBarCamera(state);
             sendMessage(msg.replyMessage());
             if (state == CameraDock::OpenedState ||
                     state == CameraDock::CapturingState) {
@@ -442,8 +516,13 @@ void SjcClient::dcpMessageReceived()
                 sendRequest("exposure");
                 sendRequest("framerate");
             }
-            else
+            else {
                 setWindowTitle(tr("Slit Jaw Camera"));
+                m_recordingDock->setFramesWritten(0, 0);
+                m_image->clear();
+                m_imageWidget->setImage(m_image);
+                m_histogramDock->setImage(m_image);
+            }
 
             return;
         }
@@ -579,6 +658,8 @@ void SjcClient::socketError(QAbstractSocket::SocketError error)
 
 void SjcClient::socketStateChanged(QAbstractSocket::SocketState state)
 {
+    updateStatusBarStream(state);
+
     // debug message output only
     if (!m_verbose)
         return;
@@ -609,6 +690,9 @@ void SjcClient::socketConnected()
 
 void SjcClient::socketDisconnected()
 {
+    m_image->clear();
+    m_imageWidget->setImage(m_image);
+    m_histogramDock->setImage(m_image);
 }
 
 void SjcClient::socketReadyRead()
