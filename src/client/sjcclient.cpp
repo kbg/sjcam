@@ -33,10 +33,12 @@
 #include "CamSys/ImageScrollArea.h"
 #include "CamSys/ImageWidget.h"
 #include "CamSys/Image.h"
+#include "CamSys/ColorTable.h"
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QtCore>
 #include <QtGui/QMessageBox>
 #include <QtGui/QLabel>
+#include <QtGui/QComboBox>
 #include <QtNetwork/QHostAddress>
 
 SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
@@ -51,6 +53,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
       m_cameraDock(new CameraDock),
       m_recordingDock(new RecordingDock),
       m_histogramDock(new HistogramDock),
+      m_comboColorTables(new QComboBox),
       m_labelDcpStatus(new QLabel),
       m_labelStreamStatus(new QLabel),
       m_labelCameraStatus(new QLabel),
@@ -64,6 +67,14 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(":/icons/camera-sj.svg"));
+
+    m_comboColorTables->addItems(QStringList()
+            << "Gray" << "Hot" << "Alien" << "Cool" << "Flame"
+            << "Rgb" << "Rainbow");
+    connect(m_comboColorTables, SIGNAL(activated(QString)),
+                                SLOT(selectColorTable(QString)));
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(m_comboColorTables);
 
     ui->statusbar->addPermanentWidget(m_labelDcpStatus);
     ui->statusbar->addPermanentWidget(m_labelStreamStatus);
@@ -157,6 +168,36 @@ void SjcClient::disconnectFromServer()
     m_dcp->waitForMessagesWritten(1000);
     m_dcp->disconnectFromServer();
     m_socket->disconnectFromHost();
+}
+
+void SjcClient::selectColorTable(const QString &name)
+{
+    // select combo box entry
+    m_comboColorTables->setCurrentIndex(m_comboColorTables->findText(name));
+
+    if (name == QString("Gray"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::grayTable());
+    else if (name == QString("Red"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::redTable());
+    else if (name == QString("Green"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::greenTable());
+    else if (name == QString("Blue"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::blueTable());
+    else if (name == QString("Hot"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::hotTable());
+    else if (name == QString("Alien"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::alienTable());
+    else if (name == QString("Cool"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::coolTable());
+    else if (name == QString("Rgb"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::rgbTable());
+    else if (name == QString("Rainbow"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::rainbowTable());
+    else if (name == QString("Flame"))
+        m_imageWidget->setColorTable(CamSys::ColorTable::flameTable());
+
+    // update color bar
+    m_histogramDock->setColorTable(m_imageWidget->colorTable());
 }
 
 void SjcClient::loadSettings()

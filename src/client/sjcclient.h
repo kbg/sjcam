@@ -38,6 +38,7 @@
 
 class QTimer;
 class QLabel;
+class QComboBox;
 class RecordingDock;
 class HistogramDock;
 
@@ -71,6 +72,7 @@ public:
 public slots:
     void connectToServer();
     void disconnectFromServer();
+    void selectColorTable(const QString &name);
 
 protected:
     void loadSettings();
@@ -122,6 +124,7 @@ private:
     CameraDock *m_cameraDock;
     RecordingDock *m_recordingDock;
     HistogramDock *m_histogramDock;
+    QComboBox *m_comboColorTables;
     QLabel *m_labelDcpStatus;
     QLabel *m_labelStreamStatus;
     QLabel *m_labelCameraStatus;
