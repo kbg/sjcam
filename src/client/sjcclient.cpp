@@ -757,15 +757,20 @@ void SjcClient::socketReadyRead()
 
     bool sizeChanged = false;
     if (width != m_image->width() || height != m_image->height()) {
-        m_image->reset(width, height, CamSys::Image::Uint16, 12);
+        if (width != 0 && height != 0)
+            m_image->reset(width, height, CamSys::Image::Uint16, 12);
+        else
+            m_image->clear();
         sizeChanged = true;
     }
 
-    for (int i = 0; i < height; ++i) {
-        const uchar *srcLine = qimage.scanLine(i);
-        quint16 *destLine = m_image->scanLine<quint16>(i);
-        for (int j = 0; j < width; ++j) {
-            destLine[j] = quint16(srcLine[j]) * 16;
+    if (!m_image->isNull()) {
+        for (int i = 0; i < height; ++i) {
+            const uchar *srcLine = qimage.scanLine(i);
+            quint16 *destLine = m_image->scanLine<quint16>(i);
+            for (int j = 0; j < width; ++j) {
+                destLine[j] = quint16(srcLine[j]) * 16;
+            }
         }
     }
 
