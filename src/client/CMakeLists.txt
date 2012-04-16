@@ -43,7 +43,7 @@ qt4_wrap_ui(sjcclient_UI_HDRS
 )
 
 qt4_add_resources(sjcclient_RCC_SRCS ui/sjcclient.qrc)
-#set(sjcclient_WINRC ui/sjcclient.rc)
+set(sjcclient_WINRC ui/sjcclient.rc)
 
 add_executable(sjcclient
     ${sjcclient_SRCS}
