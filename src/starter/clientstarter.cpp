@@ -25,8 +25,6 @@
 
 #include <QtCore/QtCore>
 
-//#define CLIENTSTARTER_VERBOSE_OUTPUT
-
 #ifdef Q_WS_WIN
     static const char *clientName = "sjcclient.exe";
 #else
@@ -36,21 +34,23 @@
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    QTextStream cout(stdout, QIODevice::WriteOnly);
 
     QDir appDirectory = QDir(app.applicationDirPath());
     QString appBaseName = QFileInfo(app.applicationFilePath()).baseName();
     QString configFileName = appBaseName + ".ini";
     QString clientFilePath = appDirectory.absoluteFilePath(clientName);
 
+    if (!QFileInfo(configFileName).isFile()) {
+        cout << "Config file \"" << configFileName << "\" not found." << endl;
+        return -3;
+    }
+
     QStringList args = app.arguments();
     args.removeFirst();
     args << "-c" << appDirectory.absoluteFilePath(configFileName);
 
-#ifdef CLIENTSTARTER_VERBOSE_OUTPUT
-    QTextStream cout(stdout, QIODevice::WriteOnly);
-    cout << "Starting: \"" << clientFilePath << " " << args.join(" ") << "\"."
-         << endl;
-#endif
-
+    cout << "Starting: \"" << clientFilePath << " " << args.join(" ")
+         << "\"." << endl;
     return QProcess::execute(clientFilePath, args);
 }
