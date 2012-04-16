@@ -3,7 +3,7 @@ project(sjcam)
 
 # Version informations
 set(SJCAM_VERSION_MAJOR 0)
-set(SJCAM_VERSION_MINOR 1)
+set(SJCAM_VERSION_MINOR 2)
 set(SJCAM_VERSION_RELEASE 0)
 set(SJCAM_VERSION_STRING "${SJCAM_VERSION_MAJOR}.${SJCAM_VERSION_MINOR}.${SJCAM_VERSION_RELEASE}")
 set(SJCAM_COPYRIGHT_STRING "Copyright (c) 2012 Kolja Glogowski\\nKiepenheuer-Institut fuer Sonnenphysik")
