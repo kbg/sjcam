@@ -128,6 +128,14 @@ void ImageStreamer::renderImage(tPvFrame *frame)
     }
 }
 
+QStringList ImageStreamer::getConnectionList() const
+{
+    QStringList connections;
+    foreach (const ClientInfo &info, m_socketMap.values())
+        connections << QString("%1:%2").arg(info.name).arg(info.port);
+    return connections;
+}
+
 void ImageStreamer::newConnection()
 {
     QTcpSocket *socket = m_tcpServer->nextPendingConnection();
@@ -142,6 +150,7 @@ void ImageStreamer::newConnection()
     m_socketMap.insert(socket, clientInfo);
     emit info(QString("Streaming client connected [%1:%2].")
               .arg(clientInfo.name).arg(clientInfo.port));
+    emit connectionListChanged(getConnectionList());
 }
 
 void ImageStreamer::socketDisconnected()
@@ -163,6 +172,7 @@ void ImageStreamer::socketDisconnected()
 
     m_socketMap.remove(socket);
     socket->deleteLater();
+    emit connectionListChanged(getConnectionList());
 }
 
 void ImageStreamer::socketReadyRead()

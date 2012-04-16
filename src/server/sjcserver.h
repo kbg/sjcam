@@ -37,6 +37,7 @@
 #include <QtCore/QVariant>
 #include <QtCore/QList>
 #include <QtCore/QMap>
+#include <QtCore/QStringList>
 #include <QtCore/QElapsedTimer>
 #include <PvApi.h>
 
@@ -83,6 +84,7 @@ protected slots:
     void recorderStarted();
     void recorderStopped();
 
+    void streamerConnectionListChanged(const QStringList &connections);
     void streamerThreadStarted();
     void streamerThreadFinished();
 
@@ -101,6 +103,7 @@ private:
     QThread * const m_imageWriterThread;
     Dcp::Client * const m_dcp;
     Dcp::CommandParser m_command;
+    QStringList m_streamConnectionList;
     QMap<QByteArray, QElapsedTimer> m_clientMap;
     int m_clientTimeout;
     QTimer *m_updateClientMapTimer;

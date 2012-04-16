@@ -71,6 +71,8 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
 
     connect(m_imageStreamer, SIGNAL(info(QString)), SLOT(printInfo(QString)));
     connect(m_imageStreamer, SIGNAL(error(QString)), SLOT(printError(QString)));
+    connect(m_imageStreamer, SIGNAL(connectionListChanged(QStringList)),
+                             SLOT(streamerConnectionListChanged(QStringList)));
     connect(m_imageStreamerThread, SIGNAL(started()),
                                    SLOT(streamerThreadStarted()));
     connect(m_imageStreamerThread, SIGNAL(finished()),
@@ -922,6 +924,41 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // get clients
+        //     returns: <client list>
+        //     note: for debugging
+        if (identifier == "clients")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            QList<QByteArray> clientList = m_clientMap.keys();
+            QByteArray clients;
+            if (!clientList.isEmpty())
+                clients = clientList.takeFirst();
+            foreach (const QByteArray &client, clientList)
+                clients += " " + client;
+            sendMessage(msg.replyMessage(clients));
+            return;
+        }
+
+        // get connections
+        //     returns: <stream socket connections>
+        //     note: for debugging
+        if (identifier == "connections")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            QString connections = m_streamConnectionList.join(" ");
+            sendMessage(msg.replyMessage(connections.toAscii()));
+            return;
+        }
+
         // get pvattr <name>
         //     note: for debugging only!
         if (identifier == "pvattr")
@@ -989,6 +1026,11 @@ void SjcServer::recorderStopped()
     sendNotification("set camerastate " + state);
 }
 
+void SjcServer::streamerConnectionListChanged(const QStringList &connections)
+{
+    m_streamConnectionList = connections;
+}
+
 void SjcServer::streamerThreadStarted()
 {
     if (verbose())
@@ -1000,6 +1042,7 @@ void SjcServer::streamerThreadFinished()
 {
     if (verbose())
         cout << "Streaming server stopped." << endl;
+    m_streamConnectionList.clear();
 }
 
 void SjcServer::writerFrameWritten(int n, int total)

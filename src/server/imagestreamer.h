@@ -31,6 +31,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QVector>
 #include <QtCore/QByteArray>
+#include <QtCore/QStringList>
 #include <QtGui/QImage>
 #include <PvApi.h>
 
@@ -57,9 +58,11 @@ signals:
     void frameFinished(tPvFrame *frame);
     void info(const QString &infoString) const;
     void error(const QString &errorString) const;
+    void connectionListChanged(const QStringList &connections) const;
 
 protected:
     void renderImage(tPvFrame *frame);
+    QStringList getConnectionList() const;
 
 protected slots:
     void newConnection();
