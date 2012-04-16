@@ -90,7 +90,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     m_histogramDock->setColorRange(0, 4095);
     m_imageWidget->setColorRange(0, 4095);
     m_imageWidget->setMouseTracking(true);
-    m_imageWidget->setCursor(Qt::CrossCursor);
+    //m_imageWidget->setCursor(Qt::CrossCursor);
     m_scrollArea->setBackgroundRole(QPalette::Dark);
     m_scrollArea->setAlignment(Qt::AlignCenter);
     m_scrollArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -293,7 +293,7 @@ void SjcClient::sendRequest(const QByteArray &identifier)
 
 void SjcClient::updateStatusBarDcp(Dcp::Client::State state)
 {
-    QString s = tr("DCP: ");
+    QString s = tr("&nbsp;DCP: ");
     if (state == Dcp::Client::ConnectingState)
         s += tr("<font color=red>Connecting</font>");
     else if (state == Dcp::Client::ConnectedState)
@@ -302,12 +302,12 @@ void SjcClient::updateStatusBarDcp(Dcp::Client::State state)
         s += tr("<font color=red>Disconnected</font>");
     else
         return;
-    m_labelDcpStatus->setText(s);
+    m_labelDcpStatus->setText(s + "&nbsp;");
 }
 
 void SjcClient::updateStatusBarStream(QAbstractSocket::SocketState state)
 {
-    QString s = tr("&nbsp;&nbsp;Stream: ");
+    QString s = tr("&nbsp;Stream: ");
     if (state == QAbstractSocket::ConnectingState)
         s += tr("<font color=red>Connecting</font>");
     else if (state == QAbstractSocket::ConnectedState)
@@ -316,12 +316,12 @@ void SjcClient::updateStatusBarStream(QAbstractSocket::SocketState state)
         s += tr("<font color=red>Disconnected</font>");
     else
         return;
-    m_labelStreamStatus->setText(s);
+    m_labelStreamStatus->setText(s + "&nbsp;");
 }
 
 void SjcClient::updateStatusBarCamera(CameraDock::CameraState state)
 {
-    QString s = tr("&nbsp;&nbsp;Camera: ");
+    QString s = tr("&nbsp;Camera: ");
     if (state == CameraDock::UnknownState)
         s += tr("<font color=red>Unknown</font>");
     else if (state == CameraDock::ClosedState)
@@ -332,7 +332,7 @@ void SjcClient::updateStatusBarCamera(CameraDock::CameraState state)
         s += tr("<font color=blue>Capturing</font>");
     else
         return;
-    m_labelCameraStatus->setText(s);
+    m_labelCameraStatus->setText(s + "&nbsp;");
 }
 
 void SjcClient::dcpError(Dcp::Client::Error error)
