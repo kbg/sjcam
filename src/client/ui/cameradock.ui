@@ -178,8 +178,11 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="minimum">
+         <double>0.008000000000000</double>
+        </property>
         <property name="maximum">
-         <double>100000.000000000000000</double>
+         <double>60000.000000000000000</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
@@ -218,6 +221,12 @@
        <widget class="QDoubleSpinBox" name="spinFrameRate">
         <property name="decimals">
          <number>3</number>
+        </property>
+        <property name="minimum">
+         <double>0.009000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>20.000000000000000</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
