@@ -58,10 +58,20 @@ public:
     ColorTable colorTable;
     QImage renderedImage;
     qreal imageScale;
+    bool markerEnabled;
+    QPointF markerPos;
+    int markerSize;
+    QColor markerInnerColor;
+    QColor markerOuterColor;
 };
 
 ImageWidgetPrivate::ImageWidgetPrivate()
-    : imageScale(1.0)
+    : imageScale(1.0),
+      markerEnabled(false),
+      markerPos(0, 0),
+      markerSize(5),
+      markerInnerColor(Qt::black),
+      markerOuterColor(Qt::white)
 {
 }
 
@@ -296,6 +306,66 @@ QPoint ImageWidget::mapFromImage(const QPoint &pos) const
     return rp;
 }
 
+bool ImageWidget::isMarkerEnabled() const
+{
+    Q_D(const ImageWidget);
+    return d->markerEnabled;
+}
+
+void ImageWidget::setMarkerEnabled(bool enable)
+{
+    Q_D(ImageWidget);
+    d->markerEnabled = enable;
+}
+
+QPointF ImageWidget::markerPos() const
+{
+    Q_D(const ImageWidget);
+    return d->markerPos;
+}
+
+void ImageWidget::setMarkerPos(const QPointF &markerPos)
+{
+    Q_D(ImageWidget);
+    d->markerPos = markerPos;
+}
+
+int ImageWidget::markerSize() const
+{
+    Q_D(const ImageWidget);
+    return d->markerSize;
+}
+
+void ImageWidget::setMarkerSize(int markerSize)
+{
+    Q_D(ImageWidget);
+    d->markerSize = markerSize > 0 ? markerSize : 0;
+}
+
+QColor ImageWidget::markerInnerColor() const
+{
+    Q_D(const ImageWidget);
+    return d->markerInnerColor;
+}
+
+void ImageWidget::setMarkerInnerColor(const QColor &color)
+{
+    Q_D(ImageWidget);
+    d->markerInnerColor = color;
+}
+
+QColor ImageWidget::markerOuterColor() const
+{
+    Q_D(const ImageWidget);
+    return d->markerOuterColor;
+}
+
+void ImageWidget::setMarkerOuterColor(const QColor &color)
+{
+    Q_D(ImageWidget);
+    d->markerOuterColor = color;
+}
+
 /*! \brief Scale the displayed image.
 
     \see imageScale(), zoomIn(), zoomOut(), zoomBestFit()
@@ -413,6 +483,25 @@ void ImageWidget::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     painter.drawImage(er, d->renderedImage, r);
+
+    // draw marker
+    if (!d->markerEnabled)
+        return;
+
+    QPointF markerPos = d->markerPos;
+    //QPointF markerPos(0.5 * (is.width()-1), 0.5 * (is.height()-1));
+    markerPos += QPointF(0.5, 0.5);
+
+    const int cx = int(markerPos.x() / sx);
+    const int cy = int(markerPos.y() / sy);
+    const int markerSize = d->markerSize;
+
+    painter.setPen(d->markerOuterColor);
+    painter.drawRect(cx-markerSize-1, cy-1, 2*markerSize+2, 2);
+    painter.drawRect(cx-1, cy-markerSize-1, 2, 2*markerSize+2);
+    painter.setPen(d->markerInnerColor);
+    painter.drawLine(cx-markerSize, cy, cx+markerSize, cy);
+    painter.drawLine(cx, cy-markerSize, cx, cy+markerSize);
 }
 
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)

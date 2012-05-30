@@ -71,6 +71,17 @@ public:
     QPoint mapToImage(const QPoint &pos) const;
     QPoint mapFromImage(const QPoint &pos) const;
 
+    bool isMarkerEnabled() const;
+    void setMarkerEnabled(bool enable = true);
+    QPointF markerPos() const;
+    void setMarkerPos(const QPointF &markerPos);
+    int markerSize() const;
+    void setMarkerSize(int markerSize);
+    QColor markerInnerColor() const;
+    void setMarkerInnerColor(const QColor &color);
+    QColor markerOuterColor() const;
+    void setMarkerOuterColor(const QColor &color);
+
 public slots:
     void zoom(qreal scale = 1.0);
     void zoomIn(qreal scaleChange = 1.0 / 3.0);
