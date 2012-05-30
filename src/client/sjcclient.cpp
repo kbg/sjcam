@@ -54,6 +54,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
       m_recordingDock(new RecordingDock),
       m_histogramDock(new HistogramDock),
       m_comboColorTables(new QComboBox),
+      m_labelImagePos(new QLabel),
       m_labelDcpStatus(new QLabel),
       m_labelStreamStatus(new QLabel),
       m_labelCameraStatus(new QLabel),
@@ -76,6 +77,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     ui->toolBar->addSeparator();
     ui->toolBar->addWidget(m_comboColorTables);
 
+    ui->statusbar->addWidget(m_labelImagePos);
     ui->statusbar->addPermanentWidget(m_labelDcpStatus);
     ui->statusbar->addPermanentWidget(m_labelStreamStatus);
     ui->statusbar->addPermanentWidget(m_labelCameraStatus);
@@ -97,6 +99,10 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     m_scrollArea->setWidget(m_imageWidget);
     setCentralWidget(m_scrollArea);
     m_scrollArea->setFocus();
+
+    connect(m_imageWidget, SIGNAL(mouseMovedTo(QPoint)),
+            SLOT(imageWidget_mouseMovedTo(QPoint)));
+    connect(m_imageWidget, SIGNAL(mouseLeft()), SLOT(imageWidget_mouseLeft()));
 
     connect(m_histogramDock, SIGNAL(colorSpreadChanged(double,double)),
             SLOT(histDock_colorSpreadChanged(double,double)));
@@ -289,6 +295,14 @@ void SjcClient::sendRequest(const QByteArray &identifier)
     if (m_verbose)
         cout << msg << endl;
     m_requestMap[msg.snr()] = RequestItem(identifier);
+}
+
+void SjcClient::updateStatusBarImagePos(const QPoint &pos)
+{
+    QString s;
+    if (pos.x() >= 0 || pos.y() >= 0)
+        s = tr("%1, %2").arg(pos.x()).arg(pos.y());
+    m_labelImagePos->setText(s);
 }
 
 void SjcClient::updateStatusBarDcp(Dcp::Client::State state)
@@ -734,6 +748,7 @@ void SjcClient::socketDisconnected()
     m_image->clear();
     m_imageWidget->setImage(m_image);
     m_histogramDock->setImage(m_image);
+    updateStatusBarImagePos(QPoint(-1, -1));
 }
 
 void SjcClient::socketReadyRead()
@@ -777,8 +792,11 @@ void SjcClient::socketReadyRead()
     m_imageWidget->setColorRange(m_histogramDock->minColorValue(),
                                  m_histogramDock->maxColorValue());
     m_imageWidget->setImage(m_image);
-    if (sizeChanged)
+    if (sizeChanged) {
         m_scrollArea->zoomBestFit();
+        QPoint pos = m_imageWidget->mapFromGlobal(QCursor::pos());
+        updateStatusBarImagePos(m_imageWidget->mapToImage(pos));
+    }
     m_histogramDock->setImage(m_image);
 
     m_socket->write("moreplease");
@@ -800,6 +818,16 @@ void SjcClient::requestTimer_timeout()
         if (iter.value().timer.hasExpired(m_requestTimeout))
             iter.remove();
     }
+}
+
+void SjcClient::imageWidget_mouseMovedTo(const QPoint &pos)
+{
+    updateStatusBarImagePos(m_imageWidget->mapToImage(pos));
+}
+
+void SjcClient::imageWidget_mouseLeft()
+{
+    updateStatusBarImagePos(QPoint(-1,-1));
 }
 
 void SjcClient::on_actionConnect_triggered(bool checked)

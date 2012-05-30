@@ -81,6 +81,7 @@ protected:
     void sendMessage(const Dcp::Message &msg);
     Dcp::Message sendMessage(const QByteArray &data);
     void sendRequest(const QByteArray &data);
+    void updateStatusBarImagePos(const QPoint &pos);
     void updateStatusBarDcp(Dcp::Client::State state);
     void updateStatusBarStream(QAbstractSocket::SocketState state);
     void updateStatusBarCamera(CameraDock::CameraState state);
@@ -108,6 +109,8 @@ protected slots:
 private slots:
     void histDock_colorSpreadChanged(double minColorValue, double maxColorValue);
     void requestTimer_timeout();
+    void imageWidget_mouseMovedTo(const QPoint &pos);
+    void imageWidget_mouseLeft();
     void on_actionConnect_triggered(bool checked);
     void on_actionAbout_triggered();
 
@@ -125,6 +128,7 @@ private:
     RecordingDock *m_recordingDock;
     HistogramDock *m_histogramDock;
     QComboBox *m_comboColorTables;
+    QLabel *m_labelImagePos;
     QLabel *m_labelDcpStatus;
     QLabel *m_labelStreamStatus;
     QLabel *m_labelCameraStatus;
