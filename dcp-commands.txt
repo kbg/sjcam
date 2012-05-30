@@ -43,6 +43,9 @@ Server:
     set writeframes <count> [<stepping>]
         returns: FIN
 
+    set marker ( true | false | center | (<xpos> <ypos>) )
+        returns: FIN
+
     get notify
         returns: ( true | false )
 
@@ -79,6 +82,9 @@ Server:
                   2 -> cannot get y-binning value
                   3 -> cannot get any binning values
 
+    get marker
+        returns: ( true | false ) <xpos> <ypos>
+
     get streaminghost
         returns: <address> <port>
 
@@ -100,6 +106,7 @@ Client:
     set maximagesize <width> <height>
     set binning <xbinning> <ybinning>
     set framewritten <number> <total>
+    set marker ( true | false ) <xpos> <ypos>
         returns: FIN
 
     get version

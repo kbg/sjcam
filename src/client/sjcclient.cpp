@@ -247,6 +247,11 @@ void SjcClient::loadSettings()
     restoreState(settings->value("WindowState").toByteArray());
     if (settings->contains("Verbose"))
         m_verbose = settings->value("Verbose").toBool();
+    m_imageWidget->setMarkerSize(settings->value("MarkerSize", 5).toInt());
+    m_imageWidget->setMarkerInnerColor(
+                settings->value("MarkerInnerColor", "black").toString());
+    m_imageWidget->setMarkerOuterColor(
+                settings->value("MarkerOuterColor", "white").toString());
     settings->endGroup();
 }
 
@@ -458,6 +463,7 @@ void SjcClient::dcpMessageReceived()
                 sendRequest("camerainfo");
                 sendRequest("exposure");
                 sendRequest("framerate");
+                sendRequest("marker");
             }
             else {
                 setWindowTitle(tr("Slit Jaw Camera"));
@@ -491,6 +497,29 @@ void SjcClient::dcpMessageReceived()
             bool ok;
             double value = args[0].toDouble(&ok);
             if (ok) m_cameraDock->setFrameRate(value);
+        }
+        else if (identifier == "marker")
+        {
+            if (args.size() != 3)
+                return;
+
+            bool ok1, ok2, ok3;
+            bool enabled;
+            if (args[0] == "true") {
+                ok1 = true;
+                enabled = true;
+            } else if (args[0] == "false") {
+                ok1 = true;
+                enabled = false;
+            } else {
+                ok1 = false;
+            }
+            QPointF pos(args[1].toDouble(&ok2), args[2].toDouble(&ok3));
+
+            if (ok1 && ok2 && ok3) {
+                m_imageWidget->setMarkerEnabled(enabled);
+                m_imageWidget->setMarkerPos(pos);
+            }
         }
         else if (identifier == "streaminghost")
         {
@@ -647,6 +676,41 @@ void SjcClient::dcpMessageReceived()
 
                 // xx
 
+                sendMessage(msg.replyMessage());
+            } else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+            }
+            return;
+        }
+
+        // set marker ( true | false ) <xpos> <ypos>
+        //     returns: FIN
+        if (identifier == "marker")
+        {
+            if (m_command.numArguments() != 3) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool ok1, ok2, ok3;
+            QList<QByteArray> args = m_command.arguments();
+
+            bool enabled;
+            if (args[0] == "true") {
+                ok1 = true;
+                enabled = true;
+            } else if (args[0] == "false") {
+                ok1 = true;
+                enabled = false;
+            } else {
+                ok1 = false;
+            }
+            QPointF pos(args[1].toDouble(&ok2), args[2].toDouble(&ok3));
+
+            if (ok1 && ok2 && ok3) {
+                sendMessage(msg.ackMessage());
+                m_imageWidget->setMarkerEnabled(enabled);
+                m_imageWidget->setMarkerPos(pos);
                 sendMessage(msg.replyMessage());
             } else {
                 sendMessage(msg.ackMessage(Dcp::AckParameterError));

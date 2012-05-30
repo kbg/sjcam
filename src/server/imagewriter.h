@@ -32,6 +32,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
+#include <QtCore/QVariant>
+#include <QtCore/QPointF>
 #include <fitsio.h>
 
 class ImageWriter : public QObject
@@ -52,6 +54,7 @@ public slots:
     void processFrame(tPvFrame *frame);
     void writeNextFrames(int count, int stepping);
     void setCameraInfo(const CameraInfo &cameraInfo);
+    void setMarkerPos(const QVariant &markerPos);
 
 signals:
     void frameFinished(tPvFrame *frame);
@@ -84,6 +87,8 @@ private:
     QByteArray m_deviceName;
     QByteArray m_telescopeName;
     CameraInfo m_cameraInfo;
+    bool m_markerEnabled;
+    QPointF m_markerPos;
     int m_count;
     int m_stepping;
     int m_i;

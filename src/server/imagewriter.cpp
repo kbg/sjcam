@@ -32,6 +32,8 @@
 
 ImageWriter::ImageWriter(QObject *parent)
     : QObject(parent),
+      m_markerEnabled(false),
+      m_markerPos(0, 0),
       m_count(0),
       m_stepping(1),
       m_i(0)
@@ -85,6 +87,16 @@ void ImageWriter::writeNextFrames(int count, int stepping)
 void ImageWriter::setCameraInfo(const CameraInfo &cameraInfo)
 {
     m_cameraInfo = cameraInfo;
+}
+
+void ImageWriter::setMarkerPos(const QVariant &markerPos)
+{
+    if (markerPos.isValid()) {
+        m_markerPos = markerPos.toPointF();
+        m_markerEnabled = true;
+    } else {
+        m_markerEnabled = false;
+    }
 }
 
 bool ImageWriter::writeFrame(tPvFrame *frame)
@@ -156,6 +168,13 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
         writeKey(ff, "EXPTIME", qFromBigEndian(buf[2]), "[us] exposure time");
     }
     writeKey(ff, "BITDEPTH", frame->BitDepth, "significant bits per pixel");
+
+    if (m_markerEnabled) {
+        writeKey(ff, "MARKER-X", m_markerPos.x(),
+                 "marker x-coordinate [0, width-1]");
+        writeKey(ff, "MARKER-Y", m_markerPos.y(),
+                 "marker y-coordinate [0, height-1]");
+    }
 
     //! \todo Add more header entries.
 

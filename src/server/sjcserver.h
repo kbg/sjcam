@@ -39,6 +39,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QStringList>
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QPointF>
 #include <PvApi.h>
 
 class Recorder;
@@ -119,6 +120,9 @@ private:
     QString m_configFileName;
     QList<NamedValue> m_camAttrList;
     bool m_verbose;
+    bool m_markerEnabled;
+    bool m_markerCentering;
+    QPointF m_markerPos;
 };
 
 #endif // SJCAM_SJCSERVER_H

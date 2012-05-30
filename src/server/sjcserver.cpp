@@ -51,7 +51,10 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
       m_numBuffers(10),
       m_streamingPort(0),
       m_configFileName(opts.configFileName),
-      m_verbose(false)
+      m_verbose(false),
+      m_markerEnabled(false),
+      m_markerCentering(true),
+      m_markerPos(0, 0)
 {
     PvInitialize();
 
@@ -169,8 +172,16 @@ bool SjcServer::openCamera()
         cout << "\n" << m_recorder->cameraInfoString() << "\n" << endl;
 
     CameraInfo cameraInfo = m_recorder->cameraInfo();
+    if (m_markerCentering) {
+        m_markerPos.setX(0.5 * (cameraInfo.sensorWidth - 1));
+        m_markerPos.setY(0.5 * (cameraInfo.sensorHeight - 1));
+        m_markerCentering = false;
+    }
     QMetaObject::invokeMethod(m_imageWriter, "setCameraInfo",
                               Q_ARG(CameraInfo, cameraInfo));
+    QVariant markerPos = m_markerEnabled ? m_markerPos : QVariant();
+    QMetaObject::invokeMethod(m_imageWriter, "setMarkerPos",
+            Q_ARG(QVariant, markerPos));
     return true;
 }
 
@@ -269,6 +280,23 @@ void SjcServer::loadConfigFile()
         m_outputFileNamePrefix = m_deviceName;
     m_outputDirectory = settings.value("Directory").toString();
     m_telescopeName = settings.value("TelescopeName").toByteArray();
+    settings.endGroup();
+
+    // Misc Section
+    settings.beginGroup("Misc");
+    m_markerEnabled = settings.value("Marker").toBool();
+    if (settings.contains("MarkerPosX") && settings.contains("MarkerPosY")) {
+        bool ok1, ok2;
+        double markerPosX = settings.value("MarkerPosX").toDouble(&ok1);
+        double markerPosY = settings.value("MarkerPosY").toDouble(&ok2);
+        if (ok1 && ok2) {
+            m_markerPos = QPointF(markerPosX, markerPosY);
+            m_markerCentering = false;
+        }
+    }
+    QVariant markerPos = m_markerEnabled ? m_markerPos : QVariant();
+    QMetaObject::invokeMethod(m_imageWriter, "setMarkerPos",
+            Q_ARG(QVariant, markerPos));
     settings.endGroup();
 }
 
@@ -666,6 +694,61 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // set marker ( true | false | center | (<xpos> <ypos>) )
+        //     returns: FIN
+        if (identifier == "marker")
+        {
+            QList<QByteArray> args = m_command.arguments();
+            if (args.size() < 1 || args.size() > 2) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            if (args.size() == 2) {
+                // set marker <xpos> <ypos>
+                bool ok1, ok2;
+                QPointF pos(args[0].toDouble(&ok1), args[1].toDouble(&ok2));
+                if (!ok1 || !ok2) {
+                    sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                    return;
+                }
+                m_markerPos = pos;
+                m_markerEnabled = true;
+                m_markerCentering = false;
+            } else {
+                // set marker ( true | false | center )
+                if (args[0] == "true" || args[0] == "1") {
+                    m_markerEnabled = true;
+                }
+                else if (args[0] == "false" || args[0] == "0") {
+                    m_markerEnabled = false;
+                }
+                else if (args[0] == "center") {
+                    m_markerEnabled = true;
+                    if (m_recorder->isCameraOpen()) {
+                        CameraInfo camInfo = m_recorder->cameraInfo();
+                        m_markerPos.setX(0.5 * (camInfo.sensorWidth - 1));
+                        m_markerPos.setY(0.5 * (camInfo.sensorHeight - 1));
+                        m_markerCentering = false;
+                    } else
+                        m_markerCentering = true;
+                } else {
+                    sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                    return;
+                }
+            }
+            sendMessage(msg.ackMessage());
+            QVariant markerPos = m_markerEnabled ? m_markerPos : QVariant();
+            QMetaObject::invokeMethod(m_imageWriter, "setMarkerPos",
+                    Q_ARG(QVariant, markerPos));
+            sendMessage(msg.replyMessage());
+            QByteArray enabled = m_markerEnabled ? "true" : "false";
+            QByteArray x = QByteArray::number(m_markerPos.x());
+            QByteArray y = QByteArray::number(m_markerPos.y());
+            sendNotification("set marker " + enabled + " " + x + " " + y);
+            return;
+        }
+
         // set verbose ( true | false )
         //     note: for debugging
         if (identifier == "verbose")
@@ -842,6 +925,22 @@ void SjcServer::dcpMessageReceived()
         {
             // not implemented yet
             sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
+            return;
+        }
+
+        // get marker
+        //     returns: ( true | false ) <xpos> <ypos>
+        if (identifier == "marker")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            QByteArray enabled = m_markerEnabled ? "true" : "false";
+            QByteArray xpos = QByteArray::number(m_markerPos.x());
+            QByteArray ypos = QByteArray::number(m_markerPos.y());
+            sendMessage(msg.replyMessage(enabled + " " + xpos + " " + ypos));
             return;
         }
 
