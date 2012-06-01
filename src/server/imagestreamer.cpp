@@ -116,12 +116,12 @@ void ImageStreamer::renderImage(tPvFrame *frame)
     QBuffer buffer(&m_jpeg);
     m_image.save(&buffer, "jpeg");
 
-    QDataStream os;
     QMutableMapIterator<QTcpSocket *, ClientInfo> iter(m_socketMap);
     while (iter.hasNext()) {
         iter.next();
         if (iter.value().imageRequested) {
-            os.setDevice(iter.key());
+            QDataStream os(iter.key());
+            os.setVersion(QDataStream::Qt_4_7);
             os << quint32(m_jpeg.size()) << m_jpeg;
             iter.value().imageRequested = false;
         }

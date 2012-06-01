@@ -821,9 +821,12 @@ void SjcClient::socketReadyRead()
 
     quint32 size;
     QDataStream is(&buf, QIODevice::ReadOnly);
+    is.setVersion(QDataStream::Qt_4_7);
     is >> size;
 
-    if (m_socket->bytesAvailable() < size)
+    // check if enough data is available to read the size variable and the
+    // following QByteArray (4 + 4 + size)
+    if (m_socket->bytesAvailable() < size + 8)
         return;
 
     QByteArray jpeg;
