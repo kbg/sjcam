@@ -62,10 +62,8 @@ quint16 ImageStreamer::serverPort() const
 
 void ImageStreamer::processFrame(tPvFrame *frame)
 {
-    if (!frame)
-        return;
-
-    renderImage(frame);
+    if (frame && (frame->Status == ePvErrSuccess))
+        renderImage(frame);
     emit frameFinished(frame);
 
     //m_image.save(QString("img_%1.jpg").arg(frame->FrameCount, 4, 10, QChar('0')));
