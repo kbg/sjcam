@@ -504,6 +504,13 @@ void SjcServer::dcpMessageReceived()
                         arg = QByteArray::number(value.toFloat(&ok), 'f', 3);
                         if (ok) sendNotification("set framerate " + arg);
                     }
+                    if (m_recorder->getAttribute("FrameStartTriggerMode", &value)) {
+                        arg = value.toByteArray();
+                        if (arg == "FixedRate" || arg == "SyncIn1"
+                                || arg == "SyncIn2") {
+                            sendNotification("set triggermode " + arg.toLower());
+                        }
+                    }
                 }
             }
             return;
@@ -549,6 +556,42 @@ void SjcServer::dcpMessageReceived()
 
             // Notification messages will be sent from the recorderStarted()
             // and recorderStopped() slots
+            return;
+        }
+
+        // set triggermode ( fixedrate | syncin1 | syncin2 )
+        //     returns: FIN
+        //     errorcodes: 1 -> cannot set trigger mode
+        if (identifier == "triggermode")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            QByteArray mode = m_command.arguments()[0];
+            if (mode == "fixedrate")
+                mode = "FixedRate";
+            else if (mode == "syncin1")
+                mode = "SyncIn1";
+            else if (mode == "syncin2")
+                mode = "SyncIn2";
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            if (m_recorder->setAttribute("FrameStartTriggerMode", mode))
+                sendMessage(msg.replyMessage());
+            else {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                QVariant value;
+                m_recorder->getAttribute("FrameStartTriggerMode", &value);
+                mode = value.toByteArray();
+            }
+            if (mode == "FixedRate" || mode == "SyncIn1" || mode == "SyncIn2")
+                sendNotification("set triggermode " + mode.toLower());
             return;
         }
 
@@ -832,6 +875,29 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        //  get triggermode
+        //      returns: ( fixedrate | syncin1 | syncin2 )
+        //      errorcodes: 1 -> cannot get trigger mode
+        if (identifier == "triggermode")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            QVariant value;
+            if (!m_recorder->getAttribute("FrameStartTriggerMode", &value)) {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                return;
+            }
+            QByteArray mode = value.toByteArray();
+            if (mode == "FixedRate" || mode == "SyncIn1" || mode == "SyncIn2")
+                mode = mode.toLower();
+            sendMessage(msg.replyMessage(mode));
+            return;
+        }
+
         // get exposure
         //     returns: <usecs>
         //     errorcodes: 1 -> cannot get exposure value
@@ -1107,8 +1173,14 @@ void SjcServer::recorderFrameFinished(ulong id, int status)
     }
 
     tPvFrame *frame = m_recorder->readFinishedFrame();
-    QMetaObject::invokeMethod(m_imageStreamer, "processFrame",
-                              Q_ARG(tPvFrame *, frame));
+    if (frame) {
+        QMetaObject::invokeMethod(m_imageStreamer, "processFrame",
+                                  Q_ARG(tPvFrame *, frame));
+    }
+    else if (verbose()) {
+        cout << "0";
+        cout.flush();
+    }
 }
 
 

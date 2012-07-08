@@ -1,4 +1,6 @@
-Server:
+= Sjcam DCP Interface =
+
+== Sjcam Server ==
     set nop
         returns: FIN
 
@@ -10,7 +12,12 @@ Server:
         errcodes: 1 -> cannot open/close camera
 
     set capturing ( start | stop )
+        returns: FIN
         errcodes: 1 -> cannot start/stop capturing
+
+    set triggermode ( fixedrate | syncin1 | syncin2 )
+        returns: FIN
+        errorcodes: 1 -> cannot set trigger mode
 
     set exposure <usecs>
         returns: FIN
@@ -20,6 +27,73 @@ Server:
         returns: FIN
         errorcodes: 1 -> cannot set framerate value
 
+    set writeframes <count> [<stepping>]
+        returns: FIN
+
+    set marker ( true | false | center | (<xpos> <ypos>) )
+        returns: FIN
+
+    get notify
+        returns: ( true | false )
+
+    get camerastate
+        returns: ( closed | opened | capturing )
+
+    get triggermode
+        returns: ( fixedrate | syncin1 | syncin2 )
+        errorcodes: 1 -> cannot get trigger mode
+
+    get exposure
+        returns: <usecs>
+        errorcodes: 1 -> cannot get exposure value
+
+    get exposure_range
+        returns: <min> <max>
+        errorcodes: 1 -> cannot get range values
+
+    get framerate
+        returns: <Hz>
+        errorcodes: 1 -> cannot get framerate value
+
+    get framerate_range
+        returns: <min> <max>
+        errorcodes: 1 -> cannot get range values
+
+    get marker
+        returns: ( true | false ) <xpos> <ypos>
+
+    get streaminghost
+        returns: <address> <port>
+
+    get camerainfo
+        returns: <camera name> <unique id> <width> <height> <bitdepth>
+
+    get version
+        returns: <server version>
+
+    get pvversion
+        returns: <pvapi version>
+
+
+== Client ==
+    set nop
+    set camerastate ( closed | opened | capturing )
+    set exposure <usecs>
+    set framerate <Hz>
+    set triggermode <mode>
+    set roi <left> <top> <width> <height>
+    set maximagesize <width> <height>
+    set binning <xbinning> <ybinning>
+    set framewritten <number> <total>
+    set marker ( true | false ) <xpos> <ypos>
+        returns: FIN
+
+    get version
+        returns: <client version>
+
+
+== Not yet implemented ==
+=== Server ===
     set roi <left> <top> <width> <height>
         returns: FIN
         errorcodes: 1 -> cannot set roi values
@@ -40,34 +114,7 @@ Server:
                   2 -> cannot set y-binning value
                   3 -> cannot set any binning values
 
-    set writeframes <count> [<stepping>]
-        returns: FIN
-
-    set marker ( true | false | center | (<xpos> <ypos>) )
-        returns: FIN
-
-    get notify
-        returns: ( true | false )
-
-    get camerastate
-        returns: ( closed | opened | capturing )
-
-    get exposure
-        returns: <usecs>
-        errorcodes: 1 -> cannot get exposure value
-
-    get exposure_range
-        returns: <min> <max>
-        errorcodes: 1 -> cannot get range values
-
-    get framerate
-        returns: <Hz>
-        errorcodes: 1 -> cannot get framerate value
-
-    get framerate_range
-        returns: <min> <max>
-        errorcodes: 1 -> cannot get range values
-
+=== Client ===
     get roi
         returns: <left> <top> <width> <height>
         errorcodes: 1 -> cannot get roi values
@@ -81,33 +128,3 @@ Server:
         errcodes: 1 -> cannot get x-binning value
                   2 -> cannot get y-binning value
                   3 -> cannot get any binning values
-
-    get marker
-        returns: ( true | false ) <xpos> <ypos>
-
-    get streaminghost
-        returns: <address> <port>
-
-    get camerainfo
-        returns: <camera name> <unique id> <width> <height> <bitdepth>
-
-    get version
-        returns: <server version>
-
-    get pvversion
-        returns: <pvapi version>
-
-Client:
-    set nop
-    set camerastate ( closed | opened | capturing )
-    set exposure <usecs>
-    set framerate <Hz>
-    set roi <left> <top> <width> <height>
-    set maximagesize <width> <height>
-    set binning <xbinning> <ybinning>
-    set framewritten <number> <total>
-    set marker ( true | false ) <xpos> <ypos>
-        returns: FIN
-
-    get version
-        returns: <client version>

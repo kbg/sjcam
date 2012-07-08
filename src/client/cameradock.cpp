@@ -35,6 +35,11 @@ CameraDock::CameraDock(QWidget *parent)
       m_frameRate(1)
 {
     ui->setupUi(this);
+
+    ui->comboTrigger->addItem("Fixed Rate", "fixedrate");
+    ui->comboTrigger->addItem("Trigger Bus", "syncin1");
+    ui->comboTrigger->addItem("GSJC", "syncin2");
+
     connect(ui->buttonOpen, SIGNAL(clicked(bool)), SIGNAL(openButtonClicked(bool)));
     connect(ui->buttonCapture, SIGNAL(clicked(bool)), SIGNAL(captureButtonClicked(bool)));
     setCameraState(UnknownState);
@@ -65,6 +70,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
         ui->buttonCapture->setChecked(false);
         ui->buttonOpen->setEnabled(false);
         ui->buttonCapture->setEnabled(false);
+        ui->comboTrigger->setEnabled(false);
         ui->spinExposure->setEnabled(false);
         ui->spinFrameRate->setEnabled(false);
         ui->buttonExposure->setEnabled(false);
@@ -76,6 +82,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
         ui->buttonCapture->setChecked(false);
         ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(false);
+        ui->comboTrigger->setEnabled(false);
         ui->spinExposure->setEnabled(false);
         ui->spinFrameRate->setEnabled(false);
         ui->buttonExposure->setEnabled(false);
@@ -87,6 +94,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
         ui->buttonCapture->setChecked(false);
         ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(true);
+        ui->comboTrigger->setEnabled(true);
         ui->spinExposure->setEnabled(true);
         ui->spinFrameRate->setEnabled(true);
         ui->buttonExposure->setEnabled(true);
@@ -97,6 +105,7 @@ void CameraDock::setCameraState(CameraDock::CameraState state)
         ui->buttonCapture->setChecked(true);
         ui->buttonOpen->setEnabled(true);
         ui->buttonCapture->setEnabled(true);
+        ui->comboTrigger->setEnabled(true);
         ui->spinExposure->setEnabled(true);
         ui->spinFrameRate->setEnabled(true);
         ui->buttonExposure->setEnabled(true);
@@ -127,6 +136,24 @@ void CameraDock::setFrameRate(double frameRate)
     ui->spinFrameRate->setValue(frameRate);
 }
 
+QByteArray CameraDock::triggerMode() const
+{
+    int i = ui->comboTrigger->currentIndex();
+    if (i >= 0) {
+        QVariant data = ui->comboTrigger->itemData(i);
+        if (data.isValid())
+            return data.toByteArray();
+    }
+    return QByteArray();
+}
+
+void CameraDock::setTriggerMode(const QByteArray &triggerMode)
+{
+    int i = ui->comboTrigger->findData(triggerMode);
+    if (i >= 0)
+        ui->comboTrigger->setCurrentIndex(i);
+}
+
 void CameraDock::setCameraName(const QString &cameraName)
 {
     ui->labelCamera->setText(cameraName);
@@ -150,6 +177,7 @@ void CameraDock::on_buttonOpen_clicked(bool checked)
 
 void CameraDock::on_buttonCapture_clicked(bool checked)
 {
+    Q_UNUSED(checked)
 }
 
 void CameraDock::on_spinExposure_editingFinished()
@@ -180,4 +208,19 @@ void CameraDock::on_buttonFrameRate_clicked()
 {
     m_frameRate = ui->spinFrameRate->value();
     emit frameRateChanged(m_frameRate);
+}
+
+void CameraDock::on_comboTrigger_activated(int index)
+{
+    QVariant data = ui->comboTrigger->itemData(index);
+    if (data.isValid())
+        emit triggerModeChanged(data.toByteArray());
+}
+
+void CameraDock::on_comboTrigger_currentIndexChanged(int index)
+{
+    QByteArray mode = ui->comboTrigger->itemData(index).toByteArray();
+    bool enable = !(mode == "syncin1" || mode == "syncin2");
+    ui->spinFrameRate->setEnabled(enable);
+    ui->buttonFrameRate->setEnabled(enable);
 }

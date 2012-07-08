@@ -97,6 +97,7 @@ protected slots:
     void captureButtonClicked(bool checked);
     void exposureChanged(double ms);
     void frameRateChanged(double hz);
+    void triggerModeChanged(const QByteArray &triggerMode);
 
     void writeFrames(int count, int stepping);
 

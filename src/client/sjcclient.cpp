@@ -132,6 +132,7 @@ SjcClient::SjcClient(const CmdLineOpts &opts, QWidget *parent)
     connect(m_cameraDock, SIGNAL(captureButtonClicked(bool)), SLOT(captureButtonClicked(bool)));
     connect(m_cameraDock, SIGNAL(exposureTimeChanged(double)), SLOT(exposureChanged(double)));
     connect(m_cameraDock, SIGNAL(frameRateChanged(double)), SLOT(frameRateChanged(double)));
+    connect(m_cameraDock, SIGNAL(triggerModeChanged(QByteArray)), SLOT(triggerModeChanged(QByteArray)));
 
     connect(m_recordingDock, SIGNAL(writeFrames(int,int)), SLOT(writeFrames(int,int)));
     connect(m_requestTimer, SIGNAL(timeout()), SLOT(requestTimer_timeout()));
@@ -461,6 +462,7 @@ void SjcClient::dcpMessageReceived()
             if (state == CameraDock::OpenedState ||
                     state == CameraDock::CapturingState) {
                 sendRequest("camerainfo");
+                sendRequest("triggermode");
                 sendRequest("exposure");
                 sendRequest("framerate");
                 sendRequest("marker");
@@ -485,6 +487,10 @@ void SjcClient::dcpMessageReceived()
             m_cameraDock->setCameraSensor(args[2] + "x" + args[3] + "@" +
                                           args[4]);
             setWindowTitle(args[0] + tr(" - Slit Jaw Camera"));
+        }
+        else if (identifier == "triggermode")
+        {
+            m_cameraDock->setTriggerMode(args[0]);
         }
         else if (identifier == "exposure")
         {
@@ -655,6 +661,21 @@ void SjcClient::dcpMessageReceived()
             return;
         }
 
+        // set triggermode <mode>
+        //     returns: FIN
+        if (identifier == "triggermode")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            QByteArray value = m_command.arguments()[0];
+            sendMessage(msg.ackMessage());
+            m_cameraDock->setTriggerMode(value);
+            sendMessage(msg.replyMessage());
+            return;
+        }
+
         // set framewritten <number> <total>
         //     returns: FIN
         if (identifier == "framewritten")
@@ -759,6 +780,11 @@ void SjcClient::exposureChanged(double ms)
 void SjcClient::frameRateChanged(double hz)
 {
     sendMessage("set framerate " + QByteArray::number(hz, 'f', 3));
+}
+
+void SjcClient::triggerModeChanged(const QByteArray &triggerMode)
+{
+    sendMessage("set triggermode " + triggerMode);
 }
 
 void SjcClient::writeFrames(int count, int stepping)

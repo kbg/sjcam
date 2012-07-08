@@ -30,6 +30,29 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
+    <item row="1" column="1">
+     <widget class="QPushButton" name="buttonCapture">
+      <property name="text">
+       <string>Capture</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>1</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
     <item row="0" column="0" colspan="2">
      <widget class="QFrame" name="frame">
       <property name="frameShape">
@@ -141,71 +164,7 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QPushButton" name="buttonOpen">
-      <property name="text">
-       <string>Open</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QPushButton" name="buttonCapture">
-      <property name="text">
-       <string>Capture</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Exposure [ms]:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
-       <widget class="QDoubleSpinBox" name="spinExposure">
-        <property name="decimals">
-         <number>3</number>
-        </property>
-        <property name="minimum">
-         <double>0.008000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>60000.000000000000000</double>
-        </property>
-        <property name="value">
-         <double>1.000000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QToolButton" name="buttonExposure">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="sjcclient.qrc">
-          <normaloff>:/icons/view-refresh.svg</normaloff>:/icons/view-refresh.svg</iconset>
-        </property>
-        <property name="autoRaise">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="3" column="0">
+    <item row="4" column="0">
      <widget class="QLabel" name="label_2">
       <property name="text">
        <string>Framerate [Hz]:</string>
@@ -215,7 +174,7 @@
       </property>
      </widget>
     </item>
-    <item row="3" column="1">
+    <item row="4" column="1">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QDoubleSpinBox" name="spinFrameRate">
@@ -249,18 +208,72 @@
       </item>
      </layout>
     </item>
-    <item row="4" column="0">
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
+    <item row="3" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QDoubleSpinBox" name="spinExposure">
+        <property name="decimals">
+         <number>3</number>
+        </property>
+        <property name="minimum">
+         <double>0.008000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>60000.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>1.000000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="buttonExposure">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="sjcclient.qrc">
+          <normaloff>:/icons/view-refresh.svg</normaloff>:/icons/view-refresh.svg</iconset>
+        </property>
+        <property name="autoRaise">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="buttonOpen">
+      <property name="text">
+       <string>Open</string>
       </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>1</height>
-       </size>
+      <property name="checkable">
+       <bool>true</bool>
       </property>
-     </spacer>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>Exposure [ms]:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Frame Trigger:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QComboBox" name="comboTrigger"/>
     </item>
    </layout>
   </widget>
@@ -268,6 +281,7 @@
  <tabstops>
   <tabstop>buttonOpen</tabstop>
   <tabstop>buttonCapture</tabstop>
+  <tabstop>comboTrigger</tabstop>
   <tabstop>spinExposure</tabstop>
   <tabstop>buttonExposure</tabstop>
   <tabstop>spinFrameRate</tabstop>

@@ -59,6 +59,9 @@ public:
     double frameRate() const;
     void setFrameRate(double frameRate);
 
+    QByteArray triggerMode() const;
+    void setTriggerMode(const QByteArray &triggerMode);
+
     void setCameraName(const QString &cameraName);
     void setCameraId(const QString &cameraId);
     void setCameraSensor(const QString &cameraSensor);
@@ -68,6 +71,7 @@ signals:
     void captureButtonClicked(bool checked);
     void exposureTimeChanged(double ms);
     void frameRateChanged(double hz);
+    void triggerModeChanged(const QByteArray &triggerMode);
 
 private slots:
     void on_buttonOpen_clicked(bool checked);
@@ -76,6 +80,8 @@ private slots:
     void on_buttonExposure_clicked();
     void on_spinFrameRate_editingFinished();
     void on_buttonFrameRate_clicked();
+    void on_comboTrigger_activated(int index);
+    void on_comboTrigger_currentIndexChanged(int index);
 
 private:
     Ui::CameraDock *ui;
