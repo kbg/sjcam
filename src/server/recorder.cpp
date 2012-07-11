@@ -307,7 +307,7 @@ void Recorder::run()
         // make sure that other threads can get a mutex lock; this seems to
         // be only neccessary in some pathological cases, but waiting 1 ms
         // doesn't hurt considering the maximum possible frame rates
-        msleep(1);
+        pvmsleep(1);
 
 // +++ queue
         // read all frames from the input queue
@@ -340,13 +340,13 @@ void Recorder::run()
         if (m_cameraQueue.isEmpty()) {
             emit error("Capture queue is empty.");
             m_cameraMutex.unlock();
-            msleep(10);
+            pvmsleep(10);
             continue;
         }
 
         bool timeout = false;
         tPvFrame *frame = m_cameraQueue.first();
-        if (!m_camera->waitForFrameDone(frame, 100, &timeout)) {
+        if (!m_camera->waitForFrameDone(frame, 150, &timeout)) {
             if (timeout) {
                 m_cameraMutex.unlock();
                 continue;

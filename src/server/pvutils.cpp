@@ -31,13 +31,13 @@
 
 #ifdef _WIN32
 #include <windows.h>
-int msleep(unsigned int ms)
+int pvmsleep(unsigned int ms)
 {
     Sleep(DWORD(ms));
     return 0;
 }
 #else
-int msleep(unsigned int ms)
+int pvmsleep(unsigned int ms)
 {
     time_t s = static_cast<time_t>(ms / 1000);
     long ns = (ms - 1000 * s) * 1000000L;
@@ -150,7 +150,7 @@ CameraInfoList availablePvCameras(uint timeout)
     ulong camCount = 0;
     for (uint i = 0; i < numLoops && camCount < 1; ++i) {
         camCount = PvCameraCount();
-        msleep(100);
+        pvmsleep(100);
     }
 
     if (camCount < 1)

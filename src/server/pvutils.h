@@ -33,7 +33,7 @@
 
 // The sleep() / usleep() functions don't work under Linux with the SIGALRM
 // spamming Prosilica API.
-int msleep(unsigned int ms);
+int pvmsleep(unsigned int ms);
 
 QString PvVersionString();
 QString PvErrorCodeString(tPvErr errorCode);
