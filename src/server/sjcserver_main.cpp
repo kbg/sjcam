@@ -112,11 +112,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (!server.openCamera())
-        return 1;
-
     QTimer::singleShot(0, &server, SLOT(connectToDcpServer()));
-    QTimer::singleShot(0, &server, SLOT(startCapturing()));
+    if (server.openCamera())
+        QTimer::singleShot(0, &server, SLOT(startCapturing()));
 
     return app.exec();
 }
