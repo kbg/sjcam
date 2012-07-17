@@ -35,6 +35,8 @@
 // spamming Prosilica API.
 int pvmsleep(unsigned int ms);
 
+qint64 PvFrameTimestamp(tPvFrame *frame, uint tsFreq, double timeScale = 1e3);
+
 QString PvVersionString();
 QString PvErrorCodeString(tPvErr errorCode);
 QString PvErrorMessage(tPvErr errorCode);

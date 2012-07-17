@@ -54,7 +54,8 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
       m_verbose(false),
       m_markerEnabled(false),
       m_markerCentering(true),
-      m_markerPos(0, 0)
+      m_markerPos(0, 0),
+      m_frameInfoLogFile(0)
 {
     PvInitialize();
 
@@ -65,8 +66,8 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
                    SLOT(dcpStateChanged(Dcp::Client::State)));
     connect(m_dcp, SIGNAL(messageReceived()), SLOT(dcpMessageReceived()));
 
-    connect(m_recorder, SIGNAL(frameFinished(ulong,int)),
-                        SLOT(recorderFrameFinished(ulong,int)));
+    connect(m_recorder, SIGNAL(frameFinished(FrameInfo)),
+                        SLOT(recorderFrameFinished(FrameInfo)));
     connect(m_recorder, SIGNAL(info(QString)), SLOT(printInfo(QString)));
     connect(m_recorder, SIGNAL(error(QString)), SLOT(printError(QString)));
     connect(m_recorder, SIGNAL(started()), SLOT(recorderStarted()));
@@ -149,6 +150,7 @@ SjcServer::~SjcServer()
     delete m_imageWriter;
     delete m_imageWriterThread;
     delete m_updateClientMapTimer;
+    delete m_frameInfoLogFile;
 
     PvUnInitialize();
 }
@@ -297,6 +299,12 @@ void SjcServer::loadConfigFile()
     QVariant markerPos = m_markerEnabled ? m_markerPos : QVariant();
     QMetaObject::invokeMethod(m_imageWriter, "setMarkerPos",
             Q_ARG(QVariant, markerPos));
+
+    QString frameInfoLogDir = settings.value("FrameInfoLogDir").toString();
+    m_frameInfoDirPath = frameInfoLogDir.isEmpty() ?
+                qApp->applicationDirPath() : frameInfoLogDir;
+    if (settings.value("FrameInfoLog", false).toBool())
+        createFrameInfoLogFile();
     settings.endGroup();
 }
 
@@ -348,6 +356,35 @@ void SjcServer::updateClientMap()
             iter.remove();
         }
     }
+}
+
+bool SjcServer::createFrameInfoLogFile()
+{
+    if (m_frameInfoLogFile)
+        return false;
+    QDateTime now = QDateTime::currentDateTimeUtc();
+    QString fileName = m_deviceName + "_frameinfo_"
+            + now.toString("yyyyMMdd-hhmmsszzz") + ".txt";
+    m_frameInfoLogFile = new QFile(
+            QDir(m_frameInfoDirPath).absoluteFilePath(fileName));
+    if (!m_frameInfoLogFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
+        delete m_frameInfoLogFile;
+        m_frameInfoLogFile = 0;
+        return false;
+    }
+    m_frameInfoLogFile->write(
+        "# id  count  status  timestamp  readoutTimestamp  readoutTimeMs\n");
+    return true;
+}
+
+void SjcServer::writeFrameInfoLog(const FrameInfo &info)
+{
+    if (!m_frameInfoLogFile)
+        return;
+    QTextStream os(m_frameInfoLogFile);
+    os << info.id << "  " << info.count << "  " << info.status << "  "
+       << info.timestamp << "  " << info.readoutTimestamp << "  "
+       << info.readoutTimeMs << endl;
 }
 
 void SjcServer::printInfo(const QString &infoString)
@@ -792,6 +829,48 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // set logframeinfo ( true | false )
+        //     return: FIN
+        if (identifier == "logframeinfo")
+        {
+            if (m_command.numArguments() != 1) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            bool enable;
+            QByteArray arg = m_command.arguments()[0];
+            if (arg == "true" || arg == "1")
+                enable = true;
+            else if (arg == "false" || arg == "0")
+                enable = false;
+            else {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+
+            if (enable == (m_frameInfoLogFile != 0)) {
+                sendMessage(msg.ackMessage(Dcp::AckWrongModeError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+
+            if (enable) {
+                Q_ASSERT(m_frameInfoLogFile == 0);
+                if (!createFrameInfoLogFile()) {
+                    sendMessage(msg.replyMessage(QByteArray(), 1));
+                    return;
+                }
+            } else {
+                Q_ASSERT(m_frameInfoLogFile != 0);
+                delete m_frameInfoLogFile;
+                m_frameInfoLogFile = 0;
+            }
+            sendMessage(msg.replyMessage());
+            return;
+        }
+
+
         // set verbose ( true | false )
         //     note: for debugging
         if (identifier == "verbose")
@@ -1010,6 +1089,20 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // get logframeinfo
+        //     returns: ( true | false )
+        if (identifier == "logframeinfo")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            QByteArray enabled = m_frameInfoLogFile ? "true" : "false";
+            sendMessage(msg.replyMessage(enabled));
+            return;
+        }
+
         // get streaminghost
         //     returns: <address> <port>
         if (identifier == "streaminghost")
@@ -1148,11 +1241,11 @@ void SjcServer::dcpMessageReceived()
     sendMessage(msg.ackMessage(Dcp::AckUnknownCommandError));
 }
 
-void SjcServer::recorderFrameFinished(ulong id, int status)
+void SjcServer::recorderFrameFinished(FrameInfo info)
 {
     if (verbose())
     {
-        switch (status)
+        switch (info.status)
         {
         case ePvErrSuccess:
             cout << ".";
@@ -1181,6 +1274,9 @@ void SjcServer::recorderFrameFinished(ulong id, int status)
         cout << "0";
         cout.flush();
     }
+
+    if (m_frameInfoLogFile)
+        writeFrameInfoLog(info);
 }
 
 

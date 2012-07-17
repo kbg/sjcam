@@ -31,6 +31,7 @@
 #include <QtCore/QMutex>
 #include <QtCore/QReadWriteLock>
 #include <QtCore/QQueue>
+#include <QtCore/QMetaType>
 #include <PvApi.h>
 
 class Camera;
@@ -72,6 +73,17 @@ struct CameraInfo
     uint timeStampFrequency;
 };
 
+struct FrameInfo
+{
+    ulong id;
+    ulong count;
+    int status;
+    qint64 timestamp;
+    qint64 readoutTimestamp;
+    qint64 readoutTimeMs;
+};
+Q_DECLARE_METATYPE(FrameInfo)
+
 class Recorder : public QThread
 {
     Q_OBJECT
@@ -103,7 +115,7 @@ public slots:
     void stop();
 
 signals:
-    void frameFinished(ulong id, int status);
+    void frameFinished(FrameInfo frameInfo);
     void info(const QString &infoString) const;
     void error(const QString &errorString) const;
 

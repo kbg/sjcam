@@ -58,6 +58,15 @@ int pvmsleep(unsigned int ms)
 }
 #endif
 
+qint64 PvFrameTimestamp(tPvFrame *frame, uint tsFreq, double timeScale)
+{
+    Q_ASSERT(frame);
+    Q_ASSERT(tsFreq > 0);
+    double timestamp = frame->TimestampHi * 4294967295.0 + frame->TimestampLo;
+    timestamp *= timeScale / tsFreq;
+    return qRound64(timestamp);
+}
+
 QString PvVersionString()
 {
     ulong major, minor;

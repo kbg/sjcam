@@ -28,6 +28,7 @@
 #define SJCAM_SJCSERVER_H
 
 #include "cmdlineopts.h"
+#include "recorder.h"
 #include <sjcdata.h>
 #include <dcpclient/dcpclient.h>
 #include <QtCore/QObject>
@@ -42,11 +43,11 @@
 #include <QtCore/QPointF>
 #include <PvApi.h>
 
-class Recorder;
 class ImageStreamer;
 class ImageWriter;
 class QThread;
 class QTimer;
+class QFile;
 
 class SjcServer : public QObject
 {
@@ -70,6 +71,8 @@ protected:
     void sendNotification(const QByteArray &data);
     void addClient(const QByteArray &deviceName);
     void removeClient(const QByteArray &deviceName);
+    bool createFrameInfoLogFile();
+    void writeFrameInfoLog(const FrameInfo &info);
 
 protected slots:
     void updateClientMap();
@@ -81,7 +84,7 @@ protected slots:
     void dcpStateChanged(Dcp::Client::State state);
     void dcpMessageReceived();
 
-    void recorderFrameFinished(ulong id, int status);
+    void recorderFrameFinished(FrameInfo info);
     void recorderStarted();
     void recorderStopped();
 
@@ -123,6 +126,8 @@ private:
     bool m_markerEnabled;
     bool m_markerCentering;
     QPointF m_markerPos;
+    QString m_frameInfoDirPath;
+    QFile *m_frameInfoLogFile;
 };
 
 #endif // SJCAM_SJCSERVER_H

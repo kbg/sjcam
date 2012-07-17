@@ -33,6 +33,10 @@
     set marker ( true | false | center | (<xpos> <ypos>) )
         returns: FIN
 
+    set logframeinfo ( true | false )
+        return: FIN
+        errorcodes: 1 -> cannot create log file
+
     get notify
         returns: ( true | false )
 
@@ -61,6 +65,9 @@
 
     get marker
         returns: ( true | false ) <xpos> <ypos>
+
+    get logframeinfo
+        returns: ( true | false )
 
     get streaminghost
         returns: <address> <port>

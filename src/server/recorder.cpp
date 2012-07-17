@@ -301,6 +301,9 @@ void Recorder::run()
     m_cameraMutex.unlock();
 // --- camera
 
+    QElapsedTimer clock;
+    clock.start();
+
     ulong id = 1;
     while (!isStopRequested())
     {
@@ -360,7 +363,15 @@ void Recorder::run()
             }
         }
         m_cameraQueue.dequeue();
-        int frameStatus = frame->Status;
+        FrameInfo frameInfo;
+        frameInfo.readoutTimestamp = clock.elapsed();
+        frameInfo.readoutTimeMs = QDateTime::currentDateTimeUtc()
+                .toMSecsSinceEpoch();
+        frameInfo.id = id;
+        frameInfo.count = frame->FrameCount;
+        frameInfo.status = frame->Status;
+        frameInfo.timestamp = PvFrameTimestamp(
+                    frame, m_cameraInfo.timeStampFrequency, 1e3);
         m_cameraMutex.unlock();
 // --- camera
 
@@ -371,7 +382,8 @@ void Recorder::run()
         m_queueMutex.unlock();
 // --- queue
 
-        emit frameFinished(id++, frameStatus);
+        emit frameFinished(frameInfo);
+        ++id;
     }
 
 // +++ camera

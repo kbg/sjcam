@@ -25,6 +25,7 @@
  */
 
 #include "imagewriter.h"
+#include "pvutils.h"
 #include "version.h"
 #include <QtCore/QDateTime>
 #include <QtCore/QtEndian>
@@ -156,11 +157,9 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
 
     writeKey(ff, "FRAME-NO", frame->FrameCount, "frame number (rolls at 65535)");
 
-    quint32 tsFreq = m_cameraInfo.timeStampFrequency;
+    uint tsFreq = m_cameraInfo.timeStampFrequency;
     if (tsFreq == 0) tsFreq = 1;
-    double timeStamp = frame->TimestampHi * 4294967295.0 + frame->TimestampLo;
-    timeStamp *= 1e6 / tsFreq;
-    writeKey(ff, "TIMESTAM", qRound64(timeStamp),
+    writeKey(ff, "TIMESTAM", PvFrameTimestamp(frame, tsFreq, 1e6),
              "[us] time stamp (time since camera power on)");
 
     if (frame->AncillaryBuffer && frame->AncillarySize >= 12) {

@@ -45,6 +45,7 @@ int main(int argc, char **argv)
     // register types which are used as slot arguments
     qRegisterMetaType<tPvFrame *>("tPvFrame *");
     qRegisterMetaType<CameraInfo>("CameraInfo");
+    qRegisterMetaType<FrameInfo>("FrameInfo");
 
     // use custom signal handler for SIGINT and SIGTERM to perform a clean
     // shutdown on CTRL+C or 'kill -15'
