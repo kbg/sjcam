@@ -63,6 +63,10 @@
         returns: <min> <max>
         errorcodes: 1 -> cannot get range values
 
+    get framestats
+        returns: <fps> <completed> <dropped>
+        errorcodes: 1 -> cannot get frame stats
+
     get marker
         returns: ( true | false ) <xpos> <ypos>
 

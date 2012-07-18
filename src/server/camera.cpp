@@ -476,6 +476,24 @@ bool Camera::setAttribute(const QByteArray &name, const QVariant &value)
     return false;
 }
 
+bool Camera::getFrameStats(float &fps, uint &completed, uint &dropped)
+{
+    float fpsValue;
+    quint32 completedValue, droppedValue;
+    if (!getAttrFloat32("StatFrameRate", &fpsValue)
+            || !getAttrUint32("StatFramesCompleted", &completedValue)
+            || !getAttrUint32("StatFramesDropped", &droppedValue)) {
+        fps = 0;
+        completed = 0;
+        dropped = 0;
+        return false;
+    }
+    fps = fpsValue;
+    completed = completedValue;
+    dropped = droppedValue;
+    return true;
+}
+
 QString Camera::infoString() const
 {
     QString result;

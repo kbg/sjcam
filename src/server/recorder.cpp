@@ -137,6 +137,16 @@ bool Recorder::setAttribute(const QByteArray &name, const QVariant &value)
     return true;
 }
 
+bool Recorder::getFrameStats(float &fps, uint &completed, uint &dropped)
+{
+    QMutexLocker locker(&m_cameraMutex);
+    if (!m_camera->getFrameStats(fps, completed, dropped)) {
+        emit error(m_camera->errorString());
+        return false;
+    }
+    return true;
+}
+
 int Recorder::numBuffers() const
 {
     QMutexLocker locker(&m_cameraMutex);

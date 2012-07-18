@@ -69,6 +69,8 @@ public:
     bool getAttribute(const QByteArray &name, QVariant *value) const;
     bool setAttribute(const QByteArray &name, const QVariant &value);
 
+    bool getFrameStats(float &fps, uint &completed, uint &dropped);
+
     tPvHandle device() const { return m_device; }
     tPvCameraInfoEx cameraInfo() const { return m_cameraInfo; }
     QString hwAddress() const { return m_hwAddress; }

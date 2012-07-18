@@ -1073,6 +1073,28 @@ void SjcServer::dcpMessageReceived()
             return;
         }
 
+        // get framestats
+        //     returns: <fps> <completed> <dropped>
+        //     errorcodes: 1 -> cannot get frame stats
+        if (identifier == "framestats")
+        {
+            if (m_command.hasArguments()) {
+                sendMessage(msg.ackMessage(Dcp::AckParameterError));
+                return;
+            }
+            sendMessage(msg.ackMessage());
+            float fps;
+            uint completed, dropped;
+            if (!m_recorder->getFrameStats(fps, completed, dropped)) {
+                sendMessage(msg.replyMessage(QByteArray(), 1));
+                return;
+            }
+            sendMessage(msg.replyMessage(QByteArray::number(fps) + " "
+                    + QByteArray::number(completed) + " "
+                    + QByteArray::number(dropped)));
+            return;
+        }
+
         // get marker
         //     returns: ( true | false ) <xpos> <ypos>
         if (identifier == "marker")

@@ -98,6 +98,7 @@ public:
 
     bool getAttribute(const QByteArray &name, QVariant *value) const;
     bool setAttribute(const QByteArray &name, const QVariant &value);
+    bool getFrameStats(float &fps, uint &completed, uint &dropped);
 
     bool hasFinishedFrame() const;
     tPvFrame * readFinishedFrame();
