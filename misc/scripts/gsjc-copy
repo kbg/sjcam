@@ -1,0 +1,25 @@
+#!/bin/bash
+# vim: ts=4 et
+
+sjcam=/opt/sjcam
+sjccopy=$sjcam/bin/sjcam-copy.py
+indirbase=/srv
+outdir=/instruments/gsjc
+logdir=/srv/log
+piddir=/var/run/sjcam
+
+case "$1" in
+    gsjc1|gsjc2)
+        indir=$indirbase/$1
+        pidfile=$piddir/$1-copy.pid
+        python $sjccopy \
+            --indir=$indir \
+            --outdir=$outdir \
+            --verbose \
+            >> $logdir/$1-copy.log 2>&1 &
+        echo $! > $pidfile
+        ;;
+    *)
+        echo "Usage: $(basename $0) <gsjcX>"
+        exit 1
+esac

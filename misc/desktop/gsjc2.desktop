@@ -1,4 +1,4 @@
-
+#!/usr/bin/env xdg-open
 [Desktop Entry]
 Version=1.0
 Encoding=UTF-8
@@ -6,7 +6,7 @@ Type=Application
 Name=GSJC2
 Comment=GREGOR Slit Jaw Camera 2
 Categories=Application;
-Exec=gsjcgui2
-Icon=/home/observer/.opt/sjcam/camera-sj.png
+Exec=sjcclient -c /opt/sjcam/etc/gsjc/sjcclient-gsjc2.ini
+Icon=/opt/sjcam/share/gsjc/camera-sj.png
 Terminal=false
 StartupNotify=false

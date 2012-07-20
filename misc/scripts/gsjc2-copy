@@ -1,5 +1,0 @@
-#!/bin/bash
-python /home/observer/.opt/sjcam/sjcam-copy.py \
-    --indir=/srv/gsjc2 \
-    --outdir=/instruments/gsjc \
-    --verbose

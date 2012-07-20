@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# chkconfig: 2345 90 10
+# description: Slit jaw camera #1 archivist.
+# pidfile: /var/run/sjcam/gsjc1-copy.pid
+
+# Source function library.
+. /etc/init.d/functions
+
+camera=gsjc1
+prog=$camera-copy
+sjc_binary=/opt/sjcam/bin/gsjc-copy
+sjc_lockfile=/var/lock/subsys/$prog
+sjc_pidfile=/var/run/sjcam/$prog.pid
+sjc_user=observer
+
+start() {
+    echo -n $"Starting $camera archivist: "
+    daemon --pidfile=$sjc_pidfile --user=$sjc_user $sjc_binary $camera
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && touch $sjc_lockfile
+}
+
+stop() {
+    echo -n "Stopping $camera archivist: "
+    killproc -p $sjc_pidfile $sjc_binary
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f $sjc_lockfile $sjc_pidfile
+}
+
+RETVAL=0
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    status)
+        status -p $sjc_pidfile $prog
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 2
+esac
+
+exit $RETVAL
