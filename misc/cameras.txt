@@ -1,0 +1,22 @@
+= Prosilica Cameras =
+
+[frame="topbot", options="header", cols="^2d,^3d,^5m,^3d,^5m,7d"]
+|=====================================================================
+| Cam ID | Model | Serial Number | Firmware | MAC Address | Usage
+
+| 105538 | GC1380M | 02-2140A-06564 | 1.42.02 | 00:0f:31:01:9c:42 |
+GREGOR Slit Jaw Camera #1
+
+| 105543 | GC1380M | 02-2140A-06569 | 1.42.02 | 00:0f:31:01:9c:47 |
+GREGOR Slit Jaw Camera #2
+
+| 108872 | GC1380M | 02-2140A-06816 | 1.42.02 | 00:0f:31:01:a9:48 |
+Laser Frequency Comb
+
+|  32014 |  GC650M | 02-2110A-06014 | 1.42.02 | 00:0f:31:00:7d:0e |
+Development Camera #1
+
+| 138463 | GC1380M | 02-2140A-19095 | 1.42.02 | 00:0f:31:02:1c:df |
+Development Camera #2
+
+|=====================================================================
