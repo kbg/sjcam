@@ -60,8 +60,7 @@ void ImageWriter::processFrame(tPvFrame *frame)
     if (frame && (frame->Status == ePvErrSuccess)) {
         if (m_i < m_count * m_stepping) {
             if (m_i % m_stepping == 0)
-                if (writeFrame(frame))
-                    emit frameWritten(m_i / m_stepping + 1, m_count);
+                writeFrame(frame);
             m_i++;
         }
     }
@@ -105,9 +104,10 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
     Q_ASSERT(frame);
 
     QDateTime now = QDateTime::currentDateTimeUtc();
+    QString fileId = now.toString("yyyyMMdd-hhmmsszzz");
     QString fileName = QString("%1_%2.fits")
             .arg(m_fileNamePrefix)
-            .arg(now.toString("yyyyMMdd-hhmmsszzz"));
+            .arg(fileId);
     QString tempFileName = fileName + ".tmp";
     QString fullTempFileName = m_directory.absoluteFilePath(tempFileName);
 
@@ -198,6 +198,7 @@ bool ImageWriter::writeFrame(tPvFrame *frame)
         return false;
     }
 
+    emit frameWritten(m_i / m_stepping + 1, m_count, fileId.toAscii());
     return true;
 }
 

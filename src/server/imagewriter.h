@@ -58,7 +58,7 @@ public slots:
 
 signals:
     void frameFinished(tPvFrame *frame);
-    void frameWritten(int n, int total);
+    void frameWritten(int n, int total, const QByteArray &fileId);
     void info(const QString &infoString) const;
     void error(const QString &errorString) const;
 

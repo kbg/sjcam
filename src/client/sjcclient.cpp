@@ -676,11 +676,12 @@ void SjcClient::dcpMessageReceived()
             return;
         }
 
-        // set framewritten <number> <total>
+        // set framewritten <number> <total> [<file-id>]
         //     returns: FIN
         if (identifier == "framewritten")
         {
-            if (m_command.numArguments() != 2) {
+            int numArgs = m_command.numArguments();
+            if (numArgs < 2 || numArgs > 3) {
                 sendMessage(msg.ackMessage(Dcp::AckParameterError));
                 return;
             }
@@ -692,11 +693,8 @@ void SjcClient::dcpMessageReceived()
 
             if (ok1 && ok2) {
                 sendMessage(msg.ackMessage());
-
-                m_recordingDock->setFramesWritten(n, total);
-
-                // xx
-
+                QByteArray fileId = (numArgs == 3) ? args[2] : QByteArray();
+                m_recordingDock->setFramesWritten(n, total, fileId);
                 sendMessage(msg.replyMessage());
             } else {
                 sendMessage(msg.ackMessage(Dcp::AckParameterError));

@@ -48,8 +48,9 @@ void RecordingDock::setStepping(int stepping)
     ui->spinCount->setValue(stepping);
 }
 
-void RecordingDock::setFramesWritten(int n, int total)
+void RecordingDock::setFramesWritten(int n, int total, const QByteArray &fileId)
 {
+    ui->labelFileId->setText(fileId);
     ui->labelFilesWritten->setText(
             tr("Wrote %1 of %2 file(s)").arg(n).arg(total));
 }

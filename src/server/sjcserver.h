@@ -92,7 +92,7 @@ protected slots:
     void streamerThreadStarted();
     void streamerThreadFinished();
 
-    void writerFrameWritten(int n, int total);
+    void writerFrameWritten(int n, int total, const QByteArray &fileId);
     void writerFrameFinished(tPvFrame *frame);
     void writerThreadStarted();
     void writerThreadFinished();

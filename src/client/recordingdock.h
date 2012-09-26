@@ -24,7 +24,7 @@ public:
     int stepping() const;
     void setStepping(int stepping);
 
-    void setFramesWritten(int n, int total);
+    void setFramesWritten(int n, int total, const QByteArray &fileId = QByteArray());
 
 signals:
     void writeFrames(int count, int stepping);

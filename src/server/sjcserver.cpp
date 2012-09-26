@@ -82,8 +82,8 @@ SjcServer::SjcServer(const CmdLineOpts &opts, QObject *parent)
     connect(m_imageStreamerThread, SIGNAL(finished()),
                                    SLOT(streamerThreadFinished()));
 
-    connect(m_imageWriter, SIGNAL(frameWritten(int,int)),
-                           SLOT(writerFrameWritten(int,int)));
+    connect(m_imageWriter, SIGNAL(frameWritten(int,int,QByteArray)),
+                           SLOT(writerFrameWritten(int,int,QByteArray)));
     connect(m_imageWriter, SIGNAL(frameFinished(tPvFrame*)),
                            SLOT(writerFrameFinished(tPvFrame*)));
     connect(m_imageWriter, SIGNAL(info(QString)), SLOT(printInfo(QString)));
@@ -1334,10 +1334,10 @@ void SjcServer::streamerThreadFinished()
     m_streamConnectionList.clear();
 }
 
-void SjcServer::writerFrameWritten(int n, int total)
+void SjcServer::writerFrameWritten(int n, int total, const QByteArray &fileId)
 {
     sendNotification("set framewritten " + QByteArray::number(n) + " " +
-                     QByteArray::number(total));
+                     QByteArray::number(total) + " " + fileId);
 }
 
 void SjcServer::writerFrameFinished(tPvFrame *frame)
